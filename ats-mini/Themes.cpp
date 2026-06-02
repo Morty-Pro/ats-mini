@@ -6,7 +6,7 @@ ColorTheme theme[] =
 {
   {
     "Default",
-    0x0005, // bg
+    0xF3C1, // bg
     0xFFFF, // text
     0xD69A, // text_muted
     0xF800, // text_warn
