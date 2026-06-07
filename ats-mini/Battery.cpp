@@ -63,6 +63,11 @@ float batteryMonitor()
 }
 
 //
+// Edited by keyhan: new formula to calculate battery percent. after this, you need to change the drawing_battery_percent function or make a new display_func with Font.
+//
+// float batteryPercent = 100.0 * pow((voltage - 3.0) / 1.2, 1.5);
+
+//
 // Show last measured battery voltage and status at given screen
 // coordinates. Return true if voltage was drawn.
 //

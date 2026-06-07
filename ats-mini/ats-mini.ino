@@ -19,7 +19,7 @@
 #define MIN_ELAPSED_TIME         5  // 300
 #define MIN_ELAPSED_RSSI_TIME  200  // RSSI check uses IN_ELAPSED_RSSI_TIME * 6 = 1.2s
 #define ELAPSED_COMMAND      10000  // time to turn off the last command controlled by encoder. Time to goes back to the VFO control // G8PTN: Increased time and corrected comment
-#define DEFAULT_VOLUME          35  // change it for your favorite sound volume
+#define DEFAULT_VOLUME          45  // change it for your favorite sound volume
 #define DEFAULT_SLEEP            0  // Default sleep interval, range = 0 (off) to 255 in steps of 5
 #define RDS_CHECK_TIME         250  // Increased from 90
 #define SEEK_TIMEOUT        600000  // Max seek timeout (ms)
@@ -166,12 +166,13 @@ void setup()
   spr.setFreeFont(&Orbitron_Light_24);
   spr.setTextColor(TH.text, TH.bg);
 
+  // Preferences Reset
   // Press and hold Encoder button to force an preferences reset
   // Note: preferences reset is recommended after firmware updates
   if(digitalRead(ENCODER_PUSH_BUTTON)==LOW)
   {
-    nvsErase();
-    diskInit(true);
+    nvsErase();   //This erases the Non-Volatile Storage (NVS) partition in the ESP32's flash memory.  it performs a factory reset of all user settings, clearing stored data like volume level, last tuned frequency, band settings, and saved preferences.
+    diskInit(true);   // This initializes the SD card file system. The parameter true typically forces a full re-initialization or repair attempt, preparing the hardware to read/write data for features like firmware updates or recording.
 
     ledcWrite(PIN_LCD_BL, 255);       // Default value 255 = 100%
     tft.setTextSize(2);
@@ -231,7 +232,7 @@ void setup()
     // Show initial screen with the QR code
     spr.fillSprite(TH.bg);
     ledcWrite(PIN_LCD_BL, currentBrt);
-    drawAboutHelp(0);
+    drawAboutHelp(1);
     // Wait for an encoder click
     while(digitalRead(ENCODER_PUSH_BUTTON)!=LOW) delay(100);
     while(digitalRead(ENCODER_PUSH_BUTTON)==LOW) delay(100);
