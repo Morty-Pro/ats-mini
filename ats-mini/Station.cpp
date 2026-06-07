@@ -15,7 +15,7 @@ static const NamedFreq namedFrequencies[] =
 {
   {  1840, "FT8"  }, {  3573, "FT8"  }, {  5357, "FT8"  }, {  7074, "FT8" },
   {  7165, "SSTV" }, {  7171, "SSTV" }, { 10136, "FT8"  }, { 14074, "FT8" },
-  { 14230, "SSTV" }, { 18100, "FT8"  }, { 21074, "FT8"  }, { 24915, "FT8" },
+  { 14230, "ØªÛŒÙˆÛŒ" }, { 18100, "FT8"  }, { 21074, "FT8"  }, { 24915, "FT8" },
   { 27700, "SSTV" }, { 28074, "FT8"  }, { 28680, "SSTV" },
 };
 
@@ -203,8 +203,8 @@ static bool showRdsTime(const char *rdsTime)
   // If NTP time available, do not use RDS time
   if(!rdsTime || ntpIsAvailable()) return(false);
 
-  // The standard RDS time format is “HH:MM”.
-  // or sometimes more complex like “DD.MM.YY,HH:MM”.
+  // The standard RDS time format is ï¿½HH:MMï¿½.
+  // or sometimes more complex like ï¿½DD.MM.YY,HH:MMï¿½.
   const char *timeField = strstr(rdsTime, ":");
 
   // If we find a valid time format...
