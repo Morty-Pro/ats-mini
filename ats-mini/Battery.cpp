@@ -120,7 +120,7 @@ bool drawBattery(int x, int y)
     //
     char percent[8];
     static float batteryPercent = 100.0 * pow((batteryVolts - 3.0) / 1.2, 1.5); // current battery percent
-    sprintf(percent, "%.02f%", batteryPercent);
+    sprintf(percent, "%d%%", (int)(batteryPercent)); //sprintf(percent, "%d"'%'"%", (int)batteryPercent);
 
     // Battery bar color and width
     switch(batteryState)
