@@ -258,7 +258,7 @@ bool sleepOn(int x)
     drawScreen();
     ledcWrite(PIN_LCD_BL, currentBrt);
 
-    digitalWrite(PIN_AMP_EN, LOW); // keyhan is it work? sleep mode is silent?
+    digitalWrite(PIN_AMP_EN, HIGH); // keyhan is it work? sleep mode is silent?
 
     // Wait till the button is released to prevent the main loop clicks
     pb1.reset(); // Reset the button state (its timers could be stale due to CPU sleep)
