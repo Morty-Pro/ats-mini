@@ -1,249 +1,175 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
 #include <Update.h>
-#include <ArduinoJson.h>
-#include "secrets.h"  // Contains your github_pat token
 
-const char* ssid = ""; // put your wifi name
-const char* password = ""; // put your wifi passowrd
+// WiFi credentials
+const char* ssid = "MARK-Sim"; // put your wifi name
+const char* password = "@to90#fol"; // put your wifi password
 
-// --- GitHub Repo Details ---
-const char* github_owner = "YOUR_GITHUB_USERNAME"; // your github username
-const char* github_repo = "ESP32-Private-OTA"; // your repo name
-const char* firmware_asset_name = "firmware.bin"; // your file name
+const char* firmwareUrl = "https://github.com/Morty-Pro/ATS-mini-keyhan/releases/download/ATS-mini-keyhan/ats-mini.ino.bin";
+const char* versionUrl = "https://raw.githubusercontent.com/Morty-Pro/ATS-mini-keyhan/refs/heads/main/version.txt";
 
-// --- Current Firmware Version ---
+// Current firmware version
 const char* currentFirmwareVersion = "1.0.0";
-
-// --- Update Check Timer ---
+const unsigned long updateCheckInterval = 5 * 60 * 1000;  // 5 minutes in milliseconds
 unsigned long lastUpdateCheck = 0;
-const long updateCheckInterval = 5 * 60 * 1000;  // 5 minutes in milliseconds
 
-// =================================================================================
-// SETUP: Runs once at boot.
-// =================================================================================
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\nBooting up...");
-  Serial.println("Current Firmware Version: " + String(currentFirmwareVersion));
+  Serial.println("\nStarting ESP32 OTA Update");
+
   connectToWiFi();
-  delay(6000);
+  Serial.println("Device is ready.");
+  Serial.println("Current Firmware Version: " + String(currentFirmwareVersion));
   checkForFirmwareUpdate();
 }
 
-// =================================================================================
-// LOOP: Runs continuously. This is the heart of the application.
-// =================================================================================
 void loop() {
+  Serial.println("Current Firmware Version: " + String(currentFirmwareVersion));
+  delay(3000);  // delay to prevent flooding serial
 }
-
-// =================================================================================
-// HELPER FUNCTIONS
-// =================================================================================
 
 void connectToWiFi() {
   Serial.print("Connecting to WiFi");
   WiFi.begin(ssid, password);
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
     Serial.print(".");
-    attempts++;
   }
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi connected. IP: " + WiFi.localIP().toString());
-    Serial.println("Starting firmware checking process");
-  } else {
-    Serial.println("\nFailed to connect to WiFi. Will retry later.");
-  }
+  Serial.println("\nWiFi connected");
+  Serial.println("IP address: " + WiFi.localIP().toString());
 }
-
 
 void checkForFirmwareUpdate() {
+  Serial.println("Checking for firmware update...");
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected. Skipping update check.");
+    Serial.println("WiFi not connected");
     return;
   }
 
-  String apiUrl = "https://api.github.com/repos/" + String(github_owner) + "/" + String(github_repo) + "/releases/latest";
-
-  Serial.println("---------------------------------");
-  Serial.println("Checking for new firmware...");
-  Serial.println("Fetching release info from: " + apiUrl);
-
-  HTTPClient http;
-  http.begin(apiUrl);
-  
-  // 1. Increase timeout to prevent "IncompleteInput" on slow connections
-  http.setTimeout(10000); 
-  
-  http.addHeader("Authorization", "token " + String(github_pat));
-  http.addHeader("Accept", "application/vnd.github.v3+json");
-  http.setUserAgent("ESP32-OTA-Client");
-
-  Serial.println("Sending API request...");
-  int httpCode = http.GET();
-
-  if (httpCode != HTTP_CODE_OK) {
-    Serial.printf("API request failed. HTTP code: %d\n", httpCode);
-    http.end();
-    return;
-  }
-  
-  Serial.printf("API request successful (HTTP %d). Parsing JSON.\n", httpCode);
-
-  // 2. Create a Filter to ignore unnecessary data
-  // We ONLY want tag_name and the assets list. This saves massive RAM.
-  StaticJsonDocument<512> filter;
-  filter["tag_name"] = true;
-  filter["assets"][0]["name"] = true;
-  filter["assets"][0]["id"] = true;
-
-  // 3. Use DynamicJsonDocument with more memory (16KB)
-  // The GitHub response is large, even with filtering, we need buffer space.
-  DynamicJsonDocument doc(16384);
-  
-  // 4. Deserialize with the filter
-  DeserializationError error = deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter));
-  
-  // Note: We do NOT call http.end() yet because we might need the stream, 
-  // but usually deserializeJson consumes it. We will close it after logic.
-
-  if (error) {
-    Serial.print("Failed to parse JSON: ");
-    Serial.println(error.c_str());
-    http.end();
+  // Step 1: Fetch the latest version from GitHub
+  String latestVersion = fetchLatestVersion();
+  if (latestVersion == "") {
+    Serial.println("Failed to fetch latest version");
     return;
   }
 
-  String latestVersion = doc["tag_name"].as<String>();
-  if (latestVersion.isEmpty() || latestVersion == "null") {
-    Serial.println("Could not find 'tag_name' in JSON response.");
-    http.end();
-    return;
-  }
-  
-  Serial.println("Current Version: " + String(currentFirmwareVersion));
-  Serial.println("Latest Version:  " + latestVersion);
+  Serial.println("Current Firmware Version: " + String(currentFirmwareVersion));
+  Serial.println("Latest Firmware Version: " + latestVersion);
 
+  // Step 2: Compare versions
   if (latestVersion != currentFirmwareVersion) {
-    Serial.println(">>> New firmware available! <<<");
-    Serial.println("Searching for asset named: " + String(firmware_asset_name));
-    String firmwareUrl = "";
-    
-    // Iterate through assets
-    JsonArray assets = doc["assets"].as<JsonArray>();
-
-    for (JsonObject asset : assets) {
-      String assetName = asset["name"].as<String>();
-      Serial.println("Found asset: " + assetName);
-
-      if (assetName == String(firmware_asset_name)) {
-        String assetId = asset["id"].as<String>();
-        // Construct the direct download URL for the asset
-        firmwareUrl = "https://api.github.com/repos/" + String(github_owner) + "/" + String(github_repo) + "/releases/assets/" + assetId;
-        Serial.println("Found matching asset! Preparing to download.");
-        break;
-      }
-    }
-    
-    // Close the JSON connection before starting the download connection
-    http.end(); 
-
-    if (firmwareUrl.isEmpty()) {
-      Serial.println("Error: Could not find the specified firmware asset in the release.");
-      return;
-    }
-    
-    // Start the download
-    downloadAndApplyFirmware(firmwareUrl);
-
+    Serial.println("New firmware available. Starting OTA update...");
+    downloadAndApplyFirmware();
   } else {
-    Serial.println("Device is up to date. No update needed.");
-    http.end();
+    Serial.println("Device is up to date.");
   }
-  Serial.println("---------------------------------");
 }
 
-void downloadAndApplyFirmware(String url) {
+String fetchLatestVersion() {
   HTTPClient http;
-  Serial.println("Starting firmware download from: " + url);
-
-  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.setUserAgent("ESP32-OTA-Client");
-  http.begin(url);
-  http.addHeader("Accept", "application/octet-stream");
-  http.addHeader("Authorization", "token " + String(github_pat));
+  http.begin(versionUrl);
 
   int httpCode = http.GET();
-  if (httpCode != HTTP_CODE_OK) {
-    Serial.printf("Download failed, HTTP code: %d\n", httpCode);
+  if (httpCode == HTTP_CODE_OK) {
+    String latestVersion = http.getString();
+    latestVersion.trim();  // Remove any extra whitespace
     http.end();
-    return;
-  }
-
-  int contentLength = http.getSize();
-  if (contentLength <= 0) {
-    Serial.println("Error: Invalid content length.");
-    http.end();
-    return;
-  }
-
-  // Begin the OTA update
-  if (!Update.begin(contentLength)) {
-    Serial.printf("Update begin failed: %s\n", Update.errorString());
-    http.end();
-    return;
-  }
-  Serial.println("Writing firmware... (this may take a moment)");
-  WiFiClient* stream = http.getStreamPtr();
-  uint8_t buff[1024];  
-  size_t totalWritten = 0;
-  int lastProgress = -1;
-
-  while (totalWritten < contentLength) {
-    int available = stream->available();
-    if (available > 0) {
-      int readLen = stream->read(buff, min((size_t)available, sizeof(buff)));
-      if (readLen < 0) {
-        Serial.println("Error reading from stream");
-        Update.abort();
-        http.end();
-        return;
-      }
-
-      if (Update.write(buff, readLen) != readLen) {
-        Serial.printf("Error: Update.write failed: %s\n", Update.errorString());
-        Update.abort();
-        http.end();
-        return;
-      }
-
-      totalWritten += readLen;
-      int progress = (int)((totalWritten * 100L) / contentLength);
-      if (progress > lastProgress && (progress % 5 == 0 || progress == 100)) {
-        Serial.printf("Progress: %d%%", progress);
-        Serial.println();
-        if (progress == 100) {
-          Serial.println(); 
-        } else {
-          Serial.print("\r"); 
-        }
-        lastProgress = progress;
-      }
-    }
-    delay(1);
-  }
-  Serial.println();
-
-  if (totalWritten != contentLength) {
-    Serial.printf("Error: Write incomplete. Wrote %d of %d bytes\n", totalWritten, contentLength);
-    Update.abort();
-  } else if (!Update.end()) {  // Finalize the update
-    Serial.printf("Error: Update end failed: %s\n", Update.errorString());
+    return latestVersion;
   } else {
-    Serial.println("Update complete! Restarting...");
-    delay(1000);
-    ESP.restart();
+    Serial.printf("Failed to fetch version. HTTP code: %d\n", httpCode);
+    http.end();
+    return "";
+  }
+}
+
+void downloadAndApplyFirmware() {
+  HTTPClient http;
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.begin(firmwareUrl);
+
+  int httpCode = http.GET();
+  Serial.printf("HTTP GET code: %d\n", httpCode);
+
+  if (httpCode == HTTP_CODE_OK) {
+    int contentLength = http.getSize();
+    Serial.printf("Firmware size: %d bytes\n", contentLength);
+
+    if (contentLength > 0) {
+      WiFiClient* stream = http.getStreamPtr();
+      if (startOTAUpdate(stream, contentLength)) {
+        Serial.println("OTA update successful, restarting...");
+        delay(2000);
+        ESP.restart();
+      } else {
+        Serial.println("OTA update failed");
+      }
+    } else {
+      Serial.println("Invalid firmware size");
+    }
+  } else {
+    Serial.printf("Failed to fetch firmware. HTTP code: %d\n", httpCode);
   }
   http.end();
+}
+
+
+bool startOTAUpdate(WiFiClient* client, int contentLength) {
+  Serial.println("Initializing update...");
+  if (!Update.begin(contentLength)) {
+    Serial.printf("Update begin failed: %s\n", Update.errorString());
+    return false;
+  }
+
+  Serial.println("Writing firmware...");
+  size_t written = 0;
+  int progress = 0;
+  int lastProgress = 0;
+
+  // Timeout variables
+  const unsigned long timeoutDuration = 120*1000;  // 10 seconds timeout
+  unsigned long lastDataTime = millis();
+
+  while (written < contentLength) {
+    if (client->available()) {
+      uint8_t buffer[128];
+      size_t len = client->read(buffer, sizeof(buffer));
+      if (len > 0) {
+        Update.write(buffer, len);
+        written += len;
+
+        // Calculate and print progress
+        progress = (written * 100) / contentLength;
+        if (progress != lastProgress) {
+          Serial.printf("Writing Progress: %d%%\n", progress);
+          lastProgress = progress;
+        }
+      }
+    }
+    // Check for timeout
+    if (millis() - lastDataTime > timeoutDuration) {
+      Serial.println("Timeout: No data received for too long. Aborting update...");
+      Update.abort();
+      return false;
+    }
+
+    yield();
+  }
+  Serial.println("\nWriting complete");
+
+  if (written != contentLength) {
+    Serial.printf("Error: Write incomplete. Expected %d but got %d bytes\n", contentLength, written);
+    Update.abort();
+    return false;
+  }
+
+  if (!Update.end()) {
+    Serial.printf("Error: Update end failed: %s\n", Update.errorString());
+    return false;
+  }
+  
+  Serial.println("Update successfully completed");
+  return true;
 }
