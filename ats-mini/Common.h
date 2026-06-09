@@ -93,6 +93,7 @@
 #define NET_AP_CONNECT 2 // Create access point, connect to a network normally, if possible
 #define NET_CONNECT    3 // Connect to a network normally, if possible
 #define NET_SYNC       4 // Connect to sync time, then disconnect
+#define NET_RUN_OTA    5 // Run OTA firmware update
 
 // Bluetooth modes
 #define BLE_OFF        0 // Bluetooth is disabled

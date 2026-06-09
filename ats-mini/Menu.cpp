@@ -296,7 +296,7 @@ int getTotalBleModes() { return(ITEM_COUNT(bleModeDesc)); }
 
 uint8_t wifiModeIdx = NET_OFF;
 static const char *wifiModeDesc[] =
-{ "Off", "AP Only", "AP+Connect", "Connect", "Sync Only", "App Update" };
+{ "Off", "AP Only", "AP+Connect", "Connect", "Sync Only", "Run OTA" };
 
 //
 // Step Menu

@@ -12,6 +12,8 @@
 #include <ESPAsyncWebServer.h>
 #include <NTPClient.h>
 #include <ESPmDNS.h>
+#include <HTTPClient.h>
+#include <Update.h>
 
 #define CONNECT_TIME  3000  // Time of inactivity to start connecting WiFi
 #define WIFI_MULTI_TOTAL_TIMEOUT  30000
@@ -58,6 +60,12 @@ static const String webThemeSelector();
 static const String webRadioPage();
 static const String webMemoryPage();
 static const String webConfigPage();
+
+// OTA update function prototypes
+static void runOtaUpdate();
+static const void downloadAndApplyFirmware();
+static const bool startOTAUpdate(WiFiClient* client, int contentLength);
+static const String fetchLatestVersion();
 
 //
 // Delayed WiFi connection
@@ -145,13 +153,19 @@ void netInit(uint8_t netMode, bool showStatus)
       // Start WiFi access point if requested
       WiFi.mode(WIFI_AP);
       // Let user see connection status if successful
-      if(wifiInitAP() && showStatus) delay(2000);
+      if(wifiInitAP() && showStatus) delay(3000);
       break;
     case NET_AP_CONNECT:
       // Start WiFi access point if requested
       WiFi.mode(WIFI_AP_STA);
       // Let user see connection status if successful
-      if(wifiInitAP() && showStatus) delay(2000);
+      if(wifiInitAP() && showStatus) delay(3000);
+      break;
+    case NET_RUN_OTA:
+      // Start WiFi in station mode for OTA update
+      WiFi.mode(WIFI_STA);
+      // Let user see connection status if successful
+      if(wifiInitAP()) delay(3000);
       break;
     default:
       // No access point
@@ -160,10 +174,24 @@ void netInit(uint8_t netMode, bool showStatus)
   }
 
   // Initialize WiFi and try connecting to a network
+  // Morty translate: will connect to wifi as STA if netMode need it.
   if(netMode>NET_AP_ONLY && wifiConnect())
   {
     // Let user see connection status if successful
-    if(netMode!=NET_SYNC && showStatus) delay(2000);
+    // Morty translate: added delay to show logs on screen from runnig the wifiConnect() function above,
+    // otherwise countinue to next line.
+    if(netMode!=NET_SYNC && netMode!=NET_RUN_OTA && showStatus) delay(3000); 
+    
+
+    // Handle OTA update mode
+    if(netMode==NET_RUN_OTA)
+    {
+      drawScreen("OTA Update", "Checking for firmware...");delay(2000);
+      runOtaUpdate();
+      // After OTA, reset WiFi back to off
+      netStop();
+      return;
+    }
 
     // NTP time updates will happen every 5 minutes
     ntpClient.setUpdateInterval(5*60*1000);
@@ -174,10 +202,11 @@ void netInit(uint8_t netMode, bool showStatus)
       if(ntpSyncTime()) break; else delay(500);
   }
 
-  // If only connected to sync...
-  if(netMode==NET_SYNC)
+  // If only connected to sync or OTA then...
+  if(netMode==NET_SYNC || netMode==NET_RUN_OTA)
   {
-    // Drop network connection
+    // Sync or OTA is Done,
+    // Drop network connection.
     WiFi.disconnect(true);
     WiFi.mode(WIFI_MODE_NULL);
   }
@@ -248,7 +277,7 @@ static bool wifiInitAP()
 static bool wifiConnect()
 {
   String status = "Connecting to WiFi network...";
-
+  
   // Clean credentials
   wifiMulti.APlistClean();
 
@@ -258,7 +287,7 @@ static bool wifiConnect()
   loginPassword = prefs.getString("loginpassword", "");
   wifiScanHidden = prefs.getBool("wifiscanhidden", false);
 
-  // Try connecting to known WiFi networks
+  // Try connecting to 3 known WiFi networks
   for(int j=0 ; (j<3) ; j++)
   {
     char nameSSID[16], namePASS[16];
@@ -277,6 +306,7 @@ static bool wifiConnect()
 
   drawScreen(status.c_str());
 
+  // try connect to hidden SSID AP
   consumeAbortPending();
   wl_status_t wifiStatus = WL_NO_SSID_AVAIL;
   uint32_t start = millis();
@@ -723,4 +753,144 @@ const String webConfigPage()
   "</TABLE>"
 "</FORM>"
 );
+}
+
+//
+// OTA (Over-The-Air) Update Functions
+// These functions handle downloading and applying firmware updates
+//
+
+// OTA configuration - modify these URLs for your firmware source
+const char* firmwareUrl = "https://github.com/Morty-Pro/ATS-mini-keyhan/releases/download/ATS-mini-keyhan/ats-mini.ino.bin";
+const char* versionUrl = "https://raw.githubusercontent.com/Morty-Pro/ATS-mini-keyhan/refs/heads/main/version.txt";
+// Current firmware version
+const char* currentFirmwareVersion = "1.0.0";
+const unsigned long updateCheckInterval = 5 * 60 * 1000;  // 5 minutes in milliseconds
+unsigned long lastUpdateCheck = 0;
+
+static void runOtaUpdate()
+{ 
+
+  // Step 1: Fetch the latest version from GitHub
+  String latestVersion = fetchLatestVersion();
+  if (latestVersion == "") {
+    Serial.println("Failed to fetch latest version");
+    return;
+  }
+  drawScreen("Current Firmware Version: ", currentFirmwareVersion);delay(1800);
+  drawScreen("Latest Firmware Version: ", latestVersion.c_str());delay(1500);
+
+  // Step 2: Compare versions
+  if (latestVersion != currentFirmwareVersion) {
+    drawScreen("Current Firmware Version: ", currentFirmwareVersion);delay(1800);
+    downloadAndApplyFirmware();
+  } else {
+    Serial.println("Device is up to date.");
+  }
+
+}
+
+static const String fetchLatestVersion() {
+  HTTPClient http;
+  http.begin(versionUrl);
+
+  int httpCode = http.GET();
+  if (httpCode == HTTP_CODE_OK) {
+    String latestVersion = http.getString();
+    latestVersion.trim();  // Remove any extra whitespace
+    http.end();
+    return latestVersion;
+  } else {
+    Serial.printf("Failed to fetch version. HTTP code: %d\n", httpCode);
+    http.end();
+    return "";
+  }
+}
+
+static const void downloadAndApplyFirmware() {
+  HTTPClient http;
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.begin(firmwareUrl);
+
+  int httpCode = http.GET();
+  Serial.printf("HTTP GET code: %d\n", httpCode);
+
+  if (httpCode == HTTP_CODE_OK) {
+    int contentLength = http.getSize();
+    Serial.printf("Firmware size: %d bytes\n", contentLength);
+
+    if (contentLength > 0) {
+      WiFiClient* stream = http.getStreamPtr();
+      if (startOTAUpdate(stream, contentLength)) {
+        Serial.println("OTA update successful, restarting...");
+        delay(2000);
+        ESP.restart();
+      } else {
+        Serial.println("OTA update failed");
+      }
+    } else {
+      Serial.println("Invalid firmware size");
+    }
+  } else {
+    Serial.printf("Failed to fetch firmware. HTTP code: %d\n", httpCode);
+  }
+  http.end();
+}
+
+static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
+  Serial.println("Initializing update...");
+  if (!Update.begin(contentLength)) {
+    Serial.printf("Update begin failed: %s\n", Update.errorString());
+    return false;
+  }
+
+  Serial.println("Writing firmware...");
+  size_t written = 0;
+  int progress = 0;
+  int lastProgress = 0;
+
+  // Timeout variables
+  const unsigned long timeoutDuration = 120*1000;  // 10 seconds timeout
+  unsigned long lastDataTime = millis();
+
+  while (written < contentLength) {
+    if (client->available()) {
+      uint8_t buffer[128];
+      size_t len = client->read(buffer, sizeof(buffer));
+      if (len > 0) {
+        Update.write(buffer, len);
+        written += len;
+
+        // Calculate and print progress
+        progress = (written * 100) / contentLength;
+        if (progress != lastProgress) {
+          Serial.printf("Writing Progress: %d%%\n", progress);
+          lastProgress = progress;
+        }
+      }
+    }
+    // Check for timeout
+    if (millis() - lastDataTime > timeoutDuration) {
+      Serial.println("Timeout: No data received for too long. Aborting update...");
+      Update.abort();
+      return false;
+    }
+
+    yield();
+  }
+  Serial.println("\nWriting complete");
+
+  if (written != contentLength) {
+    Serial.printf("Error: Write incomplete. Expected %d but got %d bytes\n", contentLength, written);
+    Update.abort();
+    return false;
+  }
+
+  if (!Update.end()) {
+    Serial.printf("Error: Update end failed: %s\n", Update.errorString());
+    return false;
+  }
+  
+  Serial.println("Update successfully completed");
+  return true;
 }
