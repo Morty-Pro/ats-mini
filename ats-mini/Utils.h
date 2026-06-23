@@ -14,6 +14,7 @@ void unloadSSB();
 
 // Get firmware version
 const char *getVersion(bool shorter = false);
+const char *getVersionNum();
 
 // Hardware info
 const char *getMACAddress();

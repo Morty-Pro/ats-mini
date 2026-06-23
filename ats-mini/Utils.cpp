@@ -44,6 +44,21 @@ const char *getVersion(bool shorter)
 }
 
 //
+// Get firmware version as a string
+//
+const char *getVersionNum()
+{
+  static char versionString[35] = "\0";
+
+  sprintf(versionString, "%1d.%02d",
+    VER_APP / 100,
+    VER_APP % 100
+  );
+
+  return(versionString);
+}
+
+//
 // Get MAC address
 //
 const char *getMACAddress()

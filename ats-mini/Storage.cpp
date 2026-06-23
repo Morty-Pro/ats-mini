@@ -6,7 +6,7 @@
 #include "nvs_flash.h"
 
 // Time of inactivity to start writing preferences
-#define STORE_TIME    10000
+#define STORE_TIME    5000
 
 // Preferences saved here
 Preferences prefs;

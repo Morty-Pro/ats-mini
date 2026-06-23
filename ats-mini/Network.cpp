@@ -153,19 +153,20 @@ void netInit(uint8_t netMode, bool showStatus)
       // Start WiFi access point if requested
       WiFi.mode(WIFI_AP);
       // Let user see connection status if successful
-      if(wifiInitAP() && showStatus) delay(3000);
+      if(wifiInitAP() && showStatus) delay(2000);
       break;
     case NET_AP_CONNECT:
       // Start WiFi access point if requested
       WiFi.mode(WIFI_AP_STA);
       // Let user see connection status if successful
-      if(wifiInitAP() && showStatus) delay(3000);
+      if(wifiInitAP() && showStatus) delay(2000);
       break;
     case NET_RUN_OTA:
       // Start WiFi in station mode for OTA update
       WiFi.mode(WIFI_STA);
       // Let user see connection status if successful
-      if(wifiInitAP()) delay(3000);
+      // if(wifiInitAP()) delay(2000);
+      drawScreen("OTA Mode", "Connecting WiFi...");
       break;
     default:
       // No access point
@@ -180,13 +181,13 @@ void netInit(uint8_t netMode, bool showStatus)
     // Let user see connection status if successful
     // Morty translate: added delay to show logs on screen from runnig the wifiConnect() function above,
     // otherwise countinue to next line.
-    if(netMode!=NET_SYNC && netMode!=NET_RUN_OTA && showStatus) delay(3000); 
+    if(netMode!=NET_SYNC && netMode!=NET_RUN_OTA && showStatus) delay(2000); 
     
 
-    // Handle OTA update mode
+    // keyhan added: Handle OTA update mode
     if(netMode==NET_RUN_OTA)
     {
-      drawScreen("OTA Update", "Checking for firmware...");delay(2000);
+      drawScreen("OTA Update", "Checking for firmware...");delay(1500);
       runOtaUpdate();
       // After OTA, reset WiFi back to off
       netStop();
@@ -272,7 +273,7 @@ static bool wifiInitAP()
 }
 
 //
-// Connect to a WiFi network
+// Connect to a WiFi network (load WiFi from prefs(memory))
 //
 static bool wifiConnect()
 {
@@ -304,7 +305,7 @@ static bool wifiConnect()
   // Done with preferences
   prefs.end();
 
-  drawScreen(status.c_str());
+  drawScreen(status.c_str());delay(1000);
 
   // try connect to hidden SSID AP
   consumeAbortPending();
@@ -759,14 +760,15 @@ const String webConfigPage()
 // OTA (Over-The-Air) Update Functions
 // These functions handle downloading and applying firmware updates
 //
-
 // OTA configuration - modify these URLs for your firmware source
 const char* firmwareUrl = "https://github.com/Morty-Pro/ATS-mini-keyhan/releases/download/ATS-mini-keyhan/ats-mini.ino.bin";
 const char* versionUrl = "https://raw.githubusercontent.com/Morty-Pro/ATS-mini-keyhan/refs/heads/main/version.txt";
 // Current firmware version
-const char* currentFirmwareVersion = "1.0.0";
+const char* currentFirmwareVersion = getVersionNum();
 const unsigned long updateCheckInterval = 5 * 60 * 1000;  // 5 minutes in milliseconds
 unsigned long lastUpdateCheck = 0;
+
+static char cbuf[50];  // Static = persists after function returns
 
 static void runOtaUpdate()
 { 
@@ -774,20 +776,20 @@ static void runOtaUpdate()
   // Step 1: Fetch the latest version from GitHub
   String latestVersion = fetchLatestVersion();
   if (latestVersion == "") {
+    drawScreen("Failed to fetch latest version");delay(2000);
     Serial.println("Failed to fetch latest version");
     return;
   }
-  drawScreen("Current Firmware Version: ", currentFirmwareVersion);delay(1800);
-  drawScreen("Latest Firmware Version: ", latestVersion.c_str());delay(1500);
+  drawScreen("Current Firmware Version: ", currentFirmwareVersion);delay(2000);
+  drawScreen("Latest Firmware Version: ", latestVersion.c_str());delay(2000);
 
   // Step 2: Compare versions
   if (latestVersion != currentFirmwareVersion) {
-    drawScreen("Current Firmware Version: ", currentFirmwareVersion);delay(1800);
+    drawScreen("Updading Firmware to", latestVersion.c_str());delay(1000);
     downloadAndApplyFirmware();
   } else {
     Serial.println("Device is up to date.");
   }
-
 }
 
 static const String fetchLatestVersion() {
@@ -814,43 +816,63 @@ static const void downloadAndApplyFirmware() {
 
   int httpCode = http.GET();
   Serial.printf("HTTP GET code: %d\n", httpCode);
+  sprintf(cbuf, "%d", httpCode);
+  drawScreen("HTTP GET code:", cbuf);delay(1000);
 
   if (httpCode == HTTP_CODE_OK) {
     int contentLength = http.getSize();
-    Serial.printf("Firmware size: %d bytes\n", contentLength);
+    Serial.printf("Firmware size: %d Bytes\n", contentLength);
+    sprintf(cbuf, "%d Bytes", contentLength);
+    drawScreen("Firmware size:", cbuf);delay(1000);
 
     if (contentLength > 0) {
       WiFiClient* stream = http.getStreamPtr();
       if (startOTAUpdate(stream, contentLength)) {
         Serial.println("OTA update successful, restarting...");
-        delay(2000);
+        drawScreen("OTA update successful,", "restarting...");delay(2000);
+        wifiModeIdx = NET_OFF;
+        netStop();
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_MODE_NULL);
+        delay(1000);
+        if(WiFi.status()==WL_CONNECTED){
+          drawScreen("Almost done.", "turn off WiFi");delay(1000);
+        }
         ESP.restart();
       } else {
         Serial.println("OTA update failed");
+        drawScreen("OTA update failed.");delay(2000);
       }
     } else {
       Serial.println("Invalid firmware size");
+      drawScreen("Invalid firmware size.");delay(2000);
     }
   } else {
     Serial.printf("Failed to fetch firmware. HTTP code: %d\n", httpCode);
+    sprintf(cbuf, "HTTP code: %d", httpCode);
+    drawScreen("Failed to fetch firmware.", cbuf);delay(2000);
   }
   http.end();
 }
 
 static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
   Serial.println("Initializing update...");
+  drawScreen("Initializing update...");delay(2000);
   if (!Update.begin(contentLength)) {
     Serial.printf("Update begin failed: %s\n", Update.errorString());
+    sprintf(cbuf, "%s", Update.errorString());
+    drawScreen("Update begin failed:", cbuf);delay(2000);
     return false;
   }
 
   Serial.println("Writing firmware...");
+  drawScreen("Writing firmware...");delay(1000);
   size_t written = 0;
   int progress = 0;
   int lastProgress = 0;
 
   // Timeout variables
-  const unsigned long timeoutDuration = 120*1000;  // 10 seconds timeout
+  const unsigned long timeoutDuration = 120*2000;  // 20 seconds timeout
   unsigned long lastDataTime = millis();
 
   while (written < contentLength) {
@@ -864,7 +886,9 @@ static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
         // Calculate and print progress
         progress = (written * 100) / contentLength;
         if (progress != lastProgress) {
-          Serial.printf("Writing Progress: %d%%\n", progress);
+          Serial.printf("Download & Write: %d%%\n", progress);
+          sprintf(cbuf, "%d%%", progress);
+          drawScreen("Download & Write...", cbuf);
           lastProgress = progress;
         }
       }
@@ -872,6 +896,7 @@ static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
     // Check for timeout
     if (millis() - lastDataTime > timeoutDuration) {
       Serial.println("Timeout: No data received for too long. Aborting update...");
+      drawScreen("Timeout: downlaod timeout.", " Aborting update...");delay(2000);
       Update.abort();
       return false;
     }
@@ -879,18 +904,24 @@ static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
     yield();
   }
   Serial.println("\nWriting complete");
+  drawScreen("Writing complete");delay(1000);
 
   if (written != contentLength) {
     Serial.printf("Error: Write incomplete. Expected %d but got %d bytes\n", contentLength, written);
+    sprintf(cbuf, "Written: %d / %d Bytes", written, contentLength);
+    drawScreen("Error: Write incomplete.", cbuf);delay(2000);
     Update.abort();
     return false;
   }
 
   if (!Update.end()) {
     Serial.printf("Error: Update end failed: %s\n", Update.errorString());
+    sprintf(cbuf, "code: %s", Update.errorString());
+    drawScreen("Error: Update end failed:", cbuf);delay(2000);
     return false;
   }
   
   Serial.println("Update successfully completed");
+  drawScreen("Update successfully completed");delay(1000);
   return true;
 }

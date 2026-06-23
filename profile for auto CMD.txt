@@ -1,0 +1,253 @@
+function ats {
+    Write-Host "-------------------------------------------------------------------------"
+    Write-Host "ats is cmd command to compile and upload ATS-MINI firmware dev-board."
+    Write-Host "Made by " -NoNewline
+    Write-Host "MortyPro" -ForegroundColor Cyan -BackgroundColor Black
+    Write-Host ""
+
+    Write-Host "(show COM ports)           " -NoNewline
+    Write-Host "ats-ls" -ForegroundColor Red
+
+    Write-Host ""
+
+    Write-Host "(compile with -clean)         " -NoNewline
+    Write-Host "ats-b" -ForegroundColor Green
+
+    Write-Host "(minimal compile-fast)        " -NoNewline
+    Write-Host "ats-bf" -ForegroundColor Green
+
+    Write-Host "(Compile -clean with Binaries)" -NoNewline
+    Write-Host "ats-bc" -ForegroundColor Green
+
+    Write-Host ""
+
+    Write-Host "(minimal upload)              " -NoNewline
+    Write-Host "ats-u COM10" -ForegroundColor Green
+
+    Write-Host "(minimal upload-fast)         " -NoNewline
+    Write-Host "ats-uf COM10" -ForegroundColor Green
+
+    Write-Host ""
+
+    Write-Host "(minimal compile & upload) " -NoNewline
+    Write-Host "ats-f COM10" -ForegroundColor Green
+
+    Write-Host "(Flash with -clean)        " -NoNewline
+    Write-Host "ats-fc COM10" -ForegroundColor Green
+
+    Write-Host "(minimal flash-fast)       " -NoNewline
+    Write-Host "ats-ff COM10" -ForegroundColor Green
+
+    Write-Host "-------------------------------------------------------------------------"
+    [console]::beep(3000, 50)
+}
+
+
+function ats-ls {
+    arduino-cli board list
+    [console]::beep(3000, 50)
+}
+
+
+function ats-b {
+    Write-Host "Building Clean ats-mini..."
+    try {
+      Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+      $time = Measure-Command {
+        arduino-cli compile --clean --profile esp32s3-ospi --build-path build .
+      }
+    }
+    finally {
+      Write-Host ""
+      Write-Host "Compile duriation: $($time.Minutes)min $($time.Seconds)sec"
+      [console]::beep(1500, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2100, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2700, 50)
+      Pop-Location
+    }
+}
+
+function ats-bc {
+    Write-Host "Building Clean Binaries ats-mini..."
+    try {
+      Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+      $time = Measure-Command {
+        arduino-cli compile --clean --export-binaries --profile esp32s3-ospi --build-path build .
+      }
+    }
+    finally {
+      Write-Host ""
+      Write-Host "Compile duriation: $($time.Minutes)min $($time.Seconds)sec"
+      [console]::beep(1500, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2100, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2700, 50)
+      Pop-Location
+    }
+}
+
+function ats-bf {
+    Write-Host "Building-fast ats-mini..."
+    try {
+      Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+      $time = Measure-Command {
+        arduino-cli compile --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none" --build-path build .
+      }
+    }
+    finally {
+      Write-Host ""
+      Write-Host "Compile duriation: $($time.Minutes)min $($time.Seconds)sec"
+      [console]::beep(1500, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2100, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2700, 50)
+      Pop-Location
+    }
+}
+
+function ats-u {
+    param(
+        [string]$Port
+    )
+    Write-Host "Uploading ats-mini...($($Port))"
+    try {
+      $time = Measure-Command {
+        Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+        arduino-cli upload -p $Port --profile esp32s3-ospi --build-path build .
+      }
+    }
+    
+    finally {
+      Write-Host ""
+      Write-Host "Upload duriation: $($time.Minutes)min $($time.Seconds)sec"
+      [console]::beep(1500, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2100, 30)
+      Start-Sleep -Milliseconds 20
+      [console]::beep(2700, 50)
+      Pop-Location
+    }
+}
+
+function ats-uf {
+    param(
+        [string]$Port
+    )
+    Write-Host "Uploading-fast ats-mini...($($Port))"
+    try {
+      $time = Measure-Command {
+        Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+        arduino-cli upload -p $Port --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none" --build-path build .
+      }
+    }
+    
+    finally {
+      Write-Host ""
+      Write-Host "Uploading-fast duriation: $($time.Minutes)min $($time.Seconds)sec"
+        [console]::beep(1500, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2100, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2700, 50)
+      Pop-Location
+    }
+}
+
+
+function ats-f {
+    param(
+        [string]$Port
+    )
+    Write-Host "Flashing ats-mini...($($Port))"
+    try {
+      $time = Measure-Command {
+        Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+        arduino-cli compile --profile esp32s3-ospi --build-path build .
+      }
+      Write-Host ""
+      Write-Host "Compile duriation: $($time.Minutes)min $($time.Seconds)sec"
+
+      Write-Host ""
+      Write-Host "Uploading ats-mini...($($Port))"
+      if ($LASTEXITCODE -eq 0) {
+         arduino-cli upload -p $Port --profile esp32s3-ospi --build-path build .
+      }
+    }
+    finally {
+        Write-Host ""
+        Write-Host "Flash duriation: $($time.Minutes)min $($time.Seconds)sec"
+        [console]::beep(1500, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2100, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2700, 50)
+        Pop-Location
+    }
+}
+
+function ats-fc {
+    param(
+        [string]$Port
+    )
+    Write-Host "Flashing with -Clean -biuldPath ats-mini...($($Port))"
+    try {
+      $time = Measure-Command {
+        Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+        arduino-cli compile --clean --profile esp32s3-ospi --build-path build .
+      }
+      Write-Host ""
+      Write-Host "Compile duriation: $($time.Minutes)min $($time.Seconds)sec"
+
+      Write-Host ""
+      Write-Host "Uploading ats-mini...($($Port))"
+      if ($LASTEXITCODE -eq 0) {
+         arduino-cli upload -p $Port --profile esp32s3-ospi --build-path build .
+      }
+    }
+    finally {
+        Write-Host ""
+        Write-Host "Flash duriation: $($time.Minutes)min $($time.Seconds)sec"
+        [console]::beep(1500, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2100, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2700, 50)
+        Pop-Location
+    }
+}
+
+
+function ats-ff {
+    param(
+        [string]$Port
+    )
+    Write-Host "Flashing-fast ats-mini...($($Port))"
+    try {
+      $time = Measure-Command {
+        Push-Location "C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini"
+        arduino-cli compile --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none" --build-path build .
+      }
+      Write-Host ""
+      Write-Host "Compile duriation: $($time.Minutes)min $($time.Seconds)sec" -ForegroundColor Red
+
+      Write-Host ""
+      Write-Host "Uploading ats-mini...($($Port))"
+      if ($LASTEXITCODE -eq 0) {
+         arduino-cli upload -p $Port --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none" --build-path build.
+      }
+    }
+    finally {
+        Write-Host ""
+        Write-Host "Flashing-fast duriation: $($time.Minutes)min $($time.Seconds)sec"
+        [console]::beep(1500, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2100, 30)
+        Start-Sleep -Milliseconds 20
+        [console]::beep(2700, 50)
+        Pop-Location
+    }
+}

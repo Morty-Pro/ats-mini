@@ -9,6 +9,8 @@
 #include <nvs_flash.h>
 #include <qrcode.h>
 
+#include "esp_ota_ops.h"
+
 static void displayQRCode(esp_qrcode_handle_t qrcode)
 {
   int size = esp_qrcode_get_size(qrcode);
@@ -3462,12 +3464,24 @@ void drawAboutHelp(uint8_t arrow)
   esp_qrcode_generate(&qrcode_config, MANUAL_URL);
   spr.drawString("Scan the QR code to read", 130, 70 + 16 * -1, 2);
   spr.drawString("the User Manual.", 130, 70 + 16 * 0, 2);
-  spr.drawString("Click the encoder button", 130, 70 + 16 * 1, 2);
-  spr.drawString("to continue.", 130, 70 + 16 * 2, 2);
+
+  // keyhan added: show wich OTA is runnig now and FLASH and PSRAM size status.
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  static char sbuf[50];  // Static = persists after function returns
+  sprintf(sbuf, "Running partition: %s", running->label);
+  spr.drawString(sbuf, 130, 70 + 16 * 1, 2);
+  sprintf(sbuf, "Flash size: %u", ESP.getFlashChipSize());
+  spr.drawString(sbuf, 130, 70 + 16 * 2, 2);
+  sprintf(sbuf, "PSRAM size: %u", ESP.getPsramSize());
+  spr.drawString(sbuf, 130, 70 + 16 * 3, 2);
+
+  // keyhan disabled 2 line below.
+//   spr.drawString("Click the encoder button", 130, 70 + 16 * 1, 2);
+//   spr.drawString("to continue.", 130, 70 + 16 * 2, 2);
   if(arrow)
   {
-    spr.drawString("Rotate the encoder to see", 130, 70 + 16 * 3, 2);
-    spr.drawString("the next page.", 130, 70 + 16 * 4, 2);
+    spr.drawString("Rotate the encoder to see", 130, 70 + 16 * 4, 2);
+    spr.drawString("the next page.", 130, 70 + 16 * 5, 2);
   }
   else
   {

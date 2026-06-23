@@ -62,6 +62,14 @@ float batteryMonitor()
   return(batteryVolts);
 }
 
+int mapFloatRounded(float value, float inMin, float inMax, int outMin, int outMax) {
+    if (value < inMin) value = inMin;
+    if (value > inMax) value = inMax;
+    
+    float mapped = outMin + (value - inMin) * (outMax - outMin) / (inMax - inMin);
+    return (int)(mapped + 0.5);  // Round to nearest integer
+}
+
 //
 // Show last measured battery voltage and status at given screen
 // coordinates. Return true if voltage was drawn.
@@ -113,7 +121,7 @@ bool drawBattery(int x, int y)
     int level;
 
     // Text representation of the voltage
-    sprintf(voltage, "%.02fV", batteryVolts);
+    // sprintf(voltage, "%.02fV", batteryVolts);
 
     //
     // Edited by keyhan: new formula to calculate battery percent. after this, you need to change the drawing_battery_percent function or make a new display_func with Font.
@@ -121,6 +129,7 @@ bool drawBattery(int x, int y)
     char percent[8];
     static float batteryPercent = 100.0 * pow((batteryVolts - 3.0) / 1.2, 1.5); // current battery percent
     sprintf(percent, "%.0f%%", batteryPercent);
+    
 
     // Battery bar color and width
     switch(batteryState)
@@ -143,7 +152,8 @@ bool drawBattery(int x, int y)
         level = 24;
         break;
     }
-
+    // override the level parameter to show smooth and cosistant battery percent
+    level = mapFloatRounded(batteryPercent, 0.0, 100.0, 6, 24);
     spr.fillRoundRect(x + 2, y + 3, level, 10, 2, color);
     spr.drawString(percent, x - 3, y, 2);
     return true;

@@ -15,6 +15,8 @@
 #include "Remote.h"
 #include "BleMode.h"
 
+#include "esp_ota_ops.h"
+
 // SI473/5 and UI
 #define MIN_ELAPSED_TIME         5  // 300
 #define MIN_ELAPSED_RSSI_TIME  200  // RSSI check uses IN_ELAPSED_RSSI_TIME * 6 = 1.2s
@@ -105,6 +107,12 @@ void setup()
 {
   // Enable serial port
   Serial.begin(115200);
+
+  // added by keyhan: print the partions of OTA and FLASH size and PSRAM size.
+  // const esp_partition_t* running = esp_ota_get_running_partition();
+  // Serial.printf("\nRunning partition: %s @ 0x%08X\n", running->label, running->address);
+  // Serial.printf("Flash size: %u\n", ESP.getFlashChipSize());
+  // Serial.printf("PSRAM size: %u\n", ESP.getPsramSize());
 
   // Encoder pins. Enable internal pull-ups
   pinMode(ENCODER_PUSH_BUTTON, INPUT_PULLUP);
@@ -240,6 +248,8 @@ void setup()
     // Show initial screen with the QR code
     spr.fillSprite(TH.bg);
     ledcWrite(PIN_LCD_BL, currentBrt);
+    // drawScreen("Current Firmware Version: ", currentFirmwareVersion);delay(2000);
+    // spr.drawString(getVersion(), 2, 25, 2);delay(2000);
     drawAboutHelp(0);
     // Wait for an encoder click
     while(digitalRead(ENCODER_PUSH_BUTTON)!=LOW) delay(100);
