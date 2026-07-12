@@ -12,8 +12,17 @@
 #include <ESPAsyncWebServer.h>
 #include <NTPClient.h>
 #include <ESPmDNS.h>
+
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Update.h>
+#include <vector>
+#include "mbedtls/pk.h"
+#include "mbedtls/sha256.h"
+
+// #ifndef OTA_ROOT_CA
+// #define OTA_ROOT_CA nullptr
+// #endif
 
 #define CONNECT_TIME  3000  // Time of inactivity to start connecting WiFi
 #define WIFI_MULTI_TOTAL_TIMEOUT  30000
@@ -63,9 +72,30 @@ static const String webConfigPage();
 
 // OTA update function prototypes
 static void runOtaUpdate();
-static const void downloadAndApplyFirmware();
-static const bool startOTAUpdate(WiFiClient* client, int contentLength);
+static bool downloadAndApplyFirmware(mbedtls_sha256_context &sha);
+static bool startOTAUpdate(WiFiClient* client, int contentLength, mbedtls_sha256_context &sha);
 static const String fetchLatestVersion();
+
+// https(TLS) public_key
+const char OTA_PUBLIC_KEY[] PROGMEM = R"EOF(-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVIlS2szOYLgYAuKwuxxZ5AuyjPl9
+cO5KsGEXaQJRfeBpkC2+aPPIanbYCF1+MaxiS6SfNzw5OsHdwmTl7+xb1w==
+-----END PUBLIC KEY-----)EOF";
+
+const char OTA_ROOT_CA[] PROGMEM = R"EOF(-----BEGIN CERTIFICATE-----
+MIICGzCCAaGgAwIBAgIQQdKd0XLq7qeAwSxs6S+HUjAKBggqhkjOPQQDAzBPMQsw
+CQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJuZXQgU2VjdXJpdHkgUmVzZWFyY2gg
+R3JvdXAxFTATBgNVBAMTDElTUkcgUm9vdCBYMjAeFw0yMDA5MDQwMDAwMDBaFw00
+MDA5MTcxNjAwMDBaME8xCzAJBgNVBAYTAlVTMSkwJwYDVQQKEyBJbnRlcm5ldCBT
+ZWN1cml0eSBSZXNlYXJjaCBHcm91cDEVMBMGA1UEAxMMSVNSRyBSb290IFgyMHYw
+EAYHKoZIzj0CAQYFK4EEACIDYgAEzZvVn4CDCuwJSvMWSj5cz3es3mcFDR0HttwW
++1qLFNvicWDEukWVEYmO6gbf9yoWHKS5xcUy4APgHoIYOIvXRdgKam7mAHf7AlF9
+ItgKbppbd9/w+kHsOdx1ymgHDB/qo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0T
+AQH/BAUwAwEB/zAdBgNVHQ4EFgQUfEKWrt5LSDv6kviejM9ti6lyN5UwCgYIKoZI
+zj0EAwMDaAAwZQIwe3lORlCEwkSHRhtFcP9Ymd70/aTSVaYgLXTWNLxBo1BfASdW
+tL4ndQavEi51mI38AjEAi/V3bNTIZargCyzuFJ0nN6T5U6VR5CmD1/iQMVtCnwr1
+/q4AaOeMSQ+2b1tbFfLn
+-----END CERTIFICATE-----)EOF";
 
 //
 // Delayed WiFi connection
@@ -761,23 +791,30 @@ const String webConfigPage()
 // These functions handle downloading and applying firmware updates
 //
 // OTA configuration - modify these URLs for your firmware source
-const char* firmwareUrl = "https://github.com/Morty-Pro/ATS-mini-keyhan/releases/download/ATS-mini-keyhan/ats-mini.ino.bin";
-const char* versionUrl = "https://raw.githubusercontent.com/Morty-Pro/ATS-mini-keyhan/refs/heads/main/version.txt";
+// const char* firmwareUrl = "https://github.com/Morty-Pro/ATS-mini-keyhan/releases/download/ATS-mini-keyhan/ats-mini.ino.bin";
+// const char* versionUrl = "https://raw.githubusercontent.com/Morty-Pro/ATS-mini-keyhan/refs/heads/main/version.txt";
+const char* firmwareUrl = "https://lizardloop.ir/khn/ats-mini.ino.bin";
+const char* versionUrl = "https://lizardloop.ir/khn/version.txt";
+const char* sigUrl = "https://lizardloop.ir/khn/ats-mini.ino.sig";
 // Current firmware version
 const char* currentFirmwareVersion = getVersionNum();
-const unsigned long updateCheckInterval = 5 * 60 * 1000;  // 5 minutes in milliseconds
+const unsigned long updateCheckInterval = 1 * 60 * 1000;  // 1 minute in milliseconds
 unsigned long lastUpdateCheck = 0;
 
 static char cbuf[50];  // Static = persists after function returns
 
+
 static void runOtaUpdate()
 { 
-
+  // declare public_key
+  mbedtls_sha256_context sha;
+  mbedtls_sha256_init(&sha);
+  mbedtls_sha256_starts(&sha, 0);
   // Step 1: Fetch the latest version from GitHub
   String latestVersion = fetchLatestVersion();
   if (latestVersion == "") {
-    drawScreen("Failed to fetch latest version");delay(2000);
     Serial.println("Failed to fetch latest version");
+    drawScreen("Failed to fetch latest version");delay(2000);
     return;
   }
   drawScreen("Current Firmware Version: ", currentFirmwareVersion);delay(2000);
@@ -786,15 +823,17 @@ static void runOtaUpdate()
   // Step 2: Compare versions
   if (latestVersion != currentFirmwareVersion) {
     drawScreen("Updading Firmware to", latestVersion.c_str());delay(1000);
-    downloadAndApplyFirmware();
+    downloadAndApplyFirmware(sha);
   } else {
     Serial.println("Device is up to date.");
   }
 }
 
 static const String fetchLatestVersion() {
+  WiFiClientSecure client;
+  client.setCACert(OTA_ROOT_CA);
   HTTPClient http;
-  http.begin(versionUrl);
+  http.begin(client, versionUrl);
 
   int httpCode = http.GET();
   if (httpCode == HTTP_CODE_OK) {
@@ -809,10 +848,12 @@ static const String fetchLatestVersion() {
   }
 }
 
-static const void downloadAndApplyFirmware() {
+static bool downloadAndApplyFirmware(mbedtls_sha256_context &sha) {
+  WiFiClientSecure client;
+  client.setCACert(OTA_ROOT_CA);
   HTTPClient http;
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.begin(firmwareUrl);
+  http.begin(client, firmwareUrl);
 
   int httpCode = http.GET();
   Serial.printf("HTTP GET code: %d\n", httpCode);
@@ -827,9 +868,68 @@ static const void downloadAndApplyFirmware() {
 
     if (contentLength > 0) {
       WiFiClient* stream = http.getStreamPtr();
-      if (startOTAUpdate(stream, contentLength)) {
+      if (startOTAUpdate(stream, contentLength, sha)) {
         Serial.println("OTA update successful, restarting...");
         drawScreen("OTA update successful,", "restarting...");delay(2000);
+
+        unsigned char hash[32];
+        mbedtls_sha256_finish(&sha, hash);
+        mbedtls_sha256_free(&sha); // sha contains the SHA256 of the downloaded firmware.
+        // download sign file from server
+        HTTPClient sigHttp;
+        sigHttp.begin(client, sigUrl);
+        int code2 = sigHttp.GET();
+        if(code2 != HTTP_CODE_OK)
+        {
+            Update.abort();
+            sigHttp.end();
+            return false;
+        }
+
+        std::vector<uint8_t> signature(sigHttp.getSize());
+        sigHttp.getStream().readBytes(signature.data(), signature.size());
+        if(signature.size()==0){
+            Update.abort();
+            sigHttp.end();
+            return false;
+        }
+
+        sigHttp.end();
+        
+
+        mbedtls_pk_context pk;
+        mbedtls_pk_init(&pk);
+        int ret2 = mbedtls_pk_parse_public_key(
+            &pk,
+            (const unsigned char*)OTA_PUBLIC_KEY,
+            strlen(OTA_PUBLIC_KEY)+1
+        );
+        if (ret2 != 0)
+        {
+            mbedtls_pk_free(&pk);
+            Update.abort();
+            return false;
+        }
+
+        // check signiture: if ret == 0  -> signiture OK , if ret != 0 signiture fail.
+        int ret = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 0, signature.data(), signature.size());
+
+        if(ret != 0)
+        {
+            Update.abort();
+            mbedtls_pk_free(&pk);
+            return false;
+        }
+        mbedtls_pk_free(&pk);
+        if(!Update.end(true))
+        {
+            Serial.printf("Error: Update end failed: %s\n", Update.errorString());
+            sprintf(cbuf, "code: %s", Update.errorString());
+            drawScreen("Error: Update end failed:", cbuf);delay(2000);
+            return false;
+        }
+        // ESP.restart();
+
         wifiModeIdx = NET_OFF;
         netStop();
         WiFi.disconnect(true);
@@ -838,6 +938,7 @@ static const void downloadAndApplyFirmware() {
         if(WiFi.status()==WL_CONNECTED){
           drawScreen("Almost done.", "turn off WiFi");delay(1000);
         }
+        delay(1000);
         ESP.restart();
       } else {
         Serial.println("OTA update failed");
@@ -855,9 +956,10 @@ static const void downloadAndApplyFirmware() {
   http.end();
 }
 
-static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
+static bool startOTAUpdate(WiFiClient* client, int contentLength, mbedtls_sha256_context &sha) {
   Serial.println("Initializing update...");
   drawScreen("Initializing update...");delay(2000);
+
   if (!Update.begin(contentLength)) {
     Serial.printf("Update begin failed: %s\n", Update.errorString());
     sprintf(cbuf, "%s", Update.errorString());
@@ -872,15 +974,26 @@ static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
   int lastProgress = 0;
 
   // Timeout variables
-  const unsigned long timeoutDuration = 120*2000;  // 20 seconds timeout
+  const unsigned long timeoutDuration = 120*2000;  // 4 minute timeout
   unsigned long lastDataTime = millis();
 
+  // compare the written bytes with the content length to ensure we write all data
   while (written < contentLength) {
     if (client->available()) {
+      // get a buffer of update from server
       uint8_t buffer[128];
       size_t len = client->read(buffer, sizeof(buffer));
+      // if buffer had value then...
       if (len > 0) {
-        Update.write(buffer, len);
+        // add the buffer to OTA partition in FLASH
+        size_t written = Update.write(buffer, len);
+        if (written != (size_t)len) // check if the write was successful
+        {
+            Update.abort();
+            return false;
+        }
+
+        mbedtls_sha256_update(&sha, buffer, len);
         written += len;
 
         // Calculate and print progress
@@ -891,6 +1004,7 @@ static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
           drawScreen("Download & Write...", cbuf);
           lastProgress = progress;
         }
+        lastDataTime = millis();
       }
     }
     // Check for timeout
@@ -914,12 +1028,12 @@ static const bool startOTAUpdate(WiFiClient* client, int contentLength) {
     return false;
   }
 
-  if (!Update.end()) {
-    Serial.printf("Error: Update end failed: %s\n", Update.errorString());
-    sprintf(cbuf, "code: %s", Update.errorString());
-    drawScreen("Error: Update end failed:", cbuf);delay(2000);
-    return false;
-  }
+  // if (!Update.end()) {
+  //   Serial.printf("Error: Update end failed: %s\n", Update.errorString());
+  //   sprintf(cbuf, "code: %s", Update.errorString());
+  //   drawScreen("Error: Update end failed:", cbuf);delay(2000);
+  //   return false;
+  // }
   
   Serial.println("Update successfully completed");
   drawScreen("Update successfully completed");delay(1000);
