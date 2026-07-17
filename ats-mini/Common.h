@@ -5,14 +5,15 @@
 #include <TFT_eSPI.h>
 #include <SI4735-fixed.h>
 
-#define RECEIVER_DESC  "ESP32-SI4732 Receiver"
-#define RECEIVER_NAME  "ATS-Mini"
+#define RECEIVER_DESC  "Signal Mini"
+#define RECEIVER_NAME  ""
 #define FIRMWARE_URL   "https://github.com/esp32-si4732/ats-mini"
-#define MANUAL_URL     "https://esp32-si4732.github.io/ats-mini/manual.html"
-#define AUTHORS_LINE1  "Authors: PU2CLR (Ricardo Caratti),"
-#define AUTHORS_LINE2  "Volos Projects, Ralph Xavier, Sunnygold,"
-#define AUTHORS_LINE3  "Goshante, G8PTN (Dave), R9UCL (Max Arnold),"
-#define AUTHORS_LINE4  "Marat Fayzullin, Keyhan (Morty)"
+#define MANUAL_URL     "https://khrh.ir/signal-support"
+#define AUTHORS_LINE1  "Signal Mini"
+#define AUTHORS_LINE2  "Version: 1.0.0"
+#define AUTHORS_LINE3  "Custom firmware developed by KHRH."
+#define AUTHORS_LINE4  "Designed for"
+#define AUTHORS_LINE5  "HamRadio Lovers"
 
 #define VER_APP        236  // Firmware version
 #define VER_SETTINGS   71   // Settings version

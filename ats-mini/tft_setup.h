@@ -36,6 +36,8 @@
 #define ST7789_DRIVER
 #define INIT_SEQUENCE_3 // Using this initialisation sequence improves the display image
 
+#define SPI_FREQUENCY 5000000 // keyhan added to remove flicker of new LCD...
+
 #define CGRAM_OFFSET
 #define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
 //#define TFT_RGB_ORDER TFT_BGR // Colour order Blue-Green-Red

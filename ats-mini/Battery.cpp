@@ -37,26 +37,26 @@ float batteryMonitor()
   // 25 to 50           1
   // 50 to 75           2
   // 75 to 100          3
-  switch(batteryState)
-  {
-    case 0:
-      if      (batteryVolts > (BATT_SOC_LEVEL1 + BATT_SOC_HYST_2)) batteryState = 1;   // State 0 > 1
-      break;
-    case 1:
-      if      (batteryVolts > (BATT_SOC_LEVEL2 + BATT_SOC_HYST_2)) batteryState = 2;   // State 1 > 2
-      else if (batteryVolts < (BATT_SOC_LEVEL1 - BATT_SOC_HYST_2)) batteryState = 0;   // State 1 > 0
-      break;
-    case 2:
-      if      (batteryVolts > (BATT_SOC_LEVEL3 + BATT_SOC_HYST_2)) batteryState = 3;   // State 2 > 3
-      else if (batteryVolts < (BATT_SOC_LEVEL2 - BATT_SOC_HYST_2)) batteryState = 1;   // State 2 > 1
-      break;
-    case 3:
-      if      (batteryVolts < (BATT_SOC_LEVEL3 - BATT_SOC_HYST_2)) batteryState = 2;   // State 3 > 2
-      break;
-    default:
-      if      (batteryState > 3) batteryState = 0;                                // State (Illegal) > 0
-      break;
-  }
+  // switch(batteryState)
+  // {
+  //   case 0:
+  //     if      (batteryVolts > (BATT_SOC_LEVEL1 + BATT_SOC_HYST_2)) batteryState = 1;   // State 0 > 1
+  //     break;
+  //   case 1:
+  //     if      (batteryVolts > (BATT_SOC_LEVEL2 + BATT_SOC_HYST_2)) batteryState = 2;   // State 1 > 2
+  //     else if (batteryVolts < (BATT_SOC_LEVEL1 - BATT_SOC_HYST_2)) batteryState = 0;   // State 1 > 0
+  //     break;
+  //   case 2:
+  //     if      (batteryVolts > (BATT_SOC_LEVEL3 + BATT_SOC_HYST_2)) batteryState = 3;   // State 2 > 3
+  //     else if (batteryVolts < (BATT_SOC_LEVEL2 - BATT_SOC_HYST_2)) batteryState = 1;   // State 2 > 1
+  //     break;
+  //   case 3:
+  //     if      (batteryVolts < (BATT_SOC_LEVEL3 - BATT_SOC_HYST_2)) batteryState = 2;   // State 3 > 2
+  //     break;
+  //   default:
+  //     if      (batteryState > 3) batteryState = 0;                                // State (Illegal) > 0
+  //     break;
+  // }
 
   // Return current voltage
   return(batteryVolts);
@@ -69,6 +69,31 @@ int mapFloatRounded(float value, float inMin, float inMax, int outMin, int outMa
     float mapped = outMin + (value - inMin) * (outMax - outMin) / (inMax - inMin);
     return (int)(mapped + 0.5);  // Round to nearest integer
 }
+
+// calculate battery_bar color
+uint16_t valueToColor(uint8_t value)
+{
+    if (value > 100)
+        value = 100;
+
+    uint8_t r, g;
+
+    if (value < 50)
+    {
+        // Red -> Yellow
+        r = 31;
+        g = value * 63 / 50;
+    }
+    else
+    {
+        // Yellow -> Green
+        r = 31 - ((value - 50) * 31 / 50);
+        g = 63;
+    }
+
+    return (r << 11) | (g << 5);
+}
+
 
 //
 // Show last measured battery voltage and status at given screen
@@ -89,12 +114,12 @@ bool drawBattery(int x, int y)
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(TH.batt_voltage);
 
-  if(switchThemeEditor())
-  {
-    // Alternate between five battery states every 10 seconds
-    batteryState = (millis() % 50000u) / 10000u;
-    batteryVolts = batteryState >= 4 ? 4.5 : 4.0;
-  }
+  // if(switchThemeEditor())
+  // {
+  //   // Alternate between five battery states every 10 seconds
+  //   batteryState = (millis() % 50000u) / 10000u;
+  //   batteryVolts = batteryState >= 4 ? 4.5 : 4.0;
+  // }
 
   // The hardware has a load sharing circuit to allow simultaneous charge and power
   // With USB(5V) connected the voltage reading will be approx. VBUS - Diode Drop = 4.65V
@@ -128,32 +153,36 @@ bool drawBattery(int x, int y)
     //
     char percent[8];
     static float batteryPercent = 100.0 * pow((batteryVolts - 3.0) / 1.2, 1.5); // current battery percent
+    if(batteryPercent >= 100.0){ // control voltage shooting
+      batteryPercent = 100.0;
+    }
     sprintf(percent, "%.0f%%", batteryPercent);
-    
 
     // Battery bar color and width
-    switch(batteryState)
-    {
-      case 0:
-        color = TH.batt_low;
-        level = 6;
-        break;
-      case 1:
-        color = TH.batt_full;
-        level = 12;
-        break;
-      case 2:
-        color = TH.batt_full;
-        level = 18;
-        break;
-      case 3:
-      default:
-        color = TH.batt_full;
-        level = 24;
-        break;
-    }
+    // switch(batteryState)
+    // {
+    //   case 0:
+    //     color = TH.batt_low;
+    //     level = 6;
+    //     break;
+    //   case 1:
+    //     color = TH.batt_full;
+    //     level = 12;
+    //     break;
+    //   case 2:
+    //     color = TH.batt_full;
+    //     level = 18;
+    //     break;
+    //   case 3:
+    //   default:
+    //     color = TH.batt_full;
+    //     level = 24;
+    //     break;
+    // }
+    
     // override the level parameter to show smooth and cosistant battery percent
     level = mapFloatRounded(batteryPercent, 0.0, 100.0, 6, 24);
+    color = valueToColor(batteryPercent);
     spr.fillRoundRect(x + 2, y + 3, level, 10, 2, color);
     spr.drawString(percent, x - 3, y, 2);
     return true;

@@ -21,19 +21,26 @@ static void displayQRCode(esp_qrcode_handle_t qrcode)
         spr.fillRect(2 + x * 4, 170 - 2 - size * 4 + y * 4, 4, 4, TH.text);
 }
 
-static void drawAboutCommon(uint8_t arrow)
+String getChipIDStr()
 {
+    uint64_t id = ESP.getEfuseMac();
+    char buf[13];          // 12 hex digits + null terminator
+    sprintf(buf, "%012llX", id);
+    return String(buf);
+}
+
+static void drawAboutCommon(uint8_t arrow)
+{	// draw arrow
   if(arrow & 3) spr.fillRect(282, 11, 22, 3, TH.text_muted);
   if(arrow & 2) spr.fillTriangle(279, 12, 285, 8, 285, 16, TH.text_muted);
   if(arrow & 1) spr.fillTriangle(307, 12, 301, 8, 301, 16, TH.text_muted);
-
+  // draw top title (two line)
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(TH.text_muted);
   spr.drawString(RECEIVER_DESC, 0, 0, 4);
   spr.setTextColor(TH.text);
-  spr.drawString(getVersion(), 2, 25, 2);
+//   spr.drawString(getVersion(), 2, 25, 2);
 }
-
 
 // 'signal', 320x170px
 const uint16_t image_signal [] PROGMEM = {
@@ -3451,8 +3458,6 @@ void drawAboutKeyhan()
   spr.pushSprite(0, 0);
 }
 
-
-
 //
 // Show HELP screen
 //
@@ -3462,35 +3467,36 @@ void drawAboutHelp(uint8_t arrow)
   esp_qrcode_config_t qrcode_config = ESP_QRCODE_CONFIG_DEFAULT();
   qrcode_config.display_func = displayQRCode;
   esp_qrcode_generate(&qrcode_config, MANUAL_URL);
-  spr.drawString("Scan the QR code to read", 130, 70 + 16 * -1, 2);
-  spr.drawString("the User Manual.", 130, 70 + 16 * 0, 2);
+  spr.drawString("Need Help?", 130, 70 + 16 * -1, 2);
+  spr.drawString("Visit:", 130, 70 + 16 * 0, 2);
+  spr.drawString("khrh.ir/signal-support", 130, 70 + 16 * 1, 2);
 
   // keyhan added: show wich OTA is runnig now and FLASH and PSRAM size status.
-  const esp_partition_t* running = esp_ota_get_running_partition();
-  static char sbuf[50];  // Static = persists after function returns
-  sprintf(sbuf, "Running partition: %s", running->label);
-  spr.drawString(sbuf, 130, 70 + 16 * 1, 2);
-  sprintf(sbuf, "Flash size: %u", ESP.getFlashChipSize());
-  spr.drawString(sbuf, 130, 70 + 16 * 2, 2);
-  sprintf(sbuf, "PSRAM size: %u", ESP.getPsramSize());
-  spr.drawString(sbuf, 130, 70 + 16 * 3, 2);
+//   const esp_partition_t* running = esp_ota_get_running_partition();
+//   static char sbuf[50];  // Static = persists after function returns
+//   sprintf(sbuf, "Running partition: %s", running->label);
+//   spr.drawString(sbuf, 130, 70 + 16 * 1, 2);
+//   sprintf(sbuf, "Flash size: %u", ESP.getFlashChipSize());
+//   spr.drawString(sbuf, 130, 70 + 16 * 2, 2);
+//   sprintf(sbuf, "PSRAM size: %u", ESP.getPsramSize());
+//   spr.drawString(sbuf, 130, 70 + 16 * 3, 2);
+
 
   // keyhan disabled 2 line below.
 //   spr.drawString("Click the encoder button", 130, 70 + 16 * 1, 2);
 //   spr.drawString("to continue.", 130, 70 + 16 * 2, 2);
-  if(arrow)
-  {
-    spr.drawString("Rotate the encoder to see", 130, 70 + 16 * 4, 2);
-    spr.drawString("the next page.", 130, 70 + 16 * 5, 2);
-  }
-  else
-  {
-    spr.drawString("To see this screen again,", 130, 70 + 16 * 4, 2);
-    spr.drawString("go to Menu->Settings->About.", 130, 70 + 16 * 5, 2);
-  }
+//   if(arrow)
+//   {
+//     spr.drawString("Rotate the encoder to see", 130, 70 + 16 * 4, 2);
+//     spr.drawString("the next page.", 130, 70 + 16 * 5, 2);
+//   }
+//   else
+//   {
+//     spr.drawString("To see this screen again,", 130, 70 + 16 * 4, 2);
+//     spr.drawString("go to Menu->Settings->About.", 130, 70 + 16 * 5, 2);
+//   }
   spr.pushSprite(0, 0);
 }
-
 
 //
 // Show SYSTEM screen
@@ -3564,6 +3570,16 @@ static void drawAboutSystem(uint8_t arrow)
   spr.pushSprite(0, 0);
 }
 
+static void drawLicense(uint8_t arrow)
+{
+	drawAboutCommon(arrow);
+	spr.drawString("Licensed to", 2, 70 + 16 * 0, 2);
+	spr.drawString("Morteza", 2, 70 + 16 * 1, 2);
+	spr.drawString("Device ID:", 2, 70 + 16 * 2, 2);
+	spr.drawString(getChipIDStr(), 2, 70 + 16 * 3, 2);
+	spr.pushSprite(0, 0);
+}
+
 //
 // Show AUTHORS screen
 //
@@ -3578,6 +3594,20 @@ static void drawAboutAuthors(uint8_t arrow)
   spr.pushSprite(0, 0);
 }
 
+static void drawInfo(uint8_t arrow)
+{
+  static char dateString[35] = "\0";
+  drawAboutCommon(arrow);
+  sprintf(dateString, "%s", __DATE__);
+  spr.drawString(dateString, 2, 70 + 16 * 0, 2);
+  sprintf(dateString, "Version: %s", getVersionNum());
+  spr.drawString(dateString, 2, 70 + 16 * 1, 2);
+  spr.drawString(AUTHORS_LINE3, 2, 70 + 16 * 2, 2);
+  spr.drawString(AUTHORS_LINE4, 2, 70 + 16 * 3, 2);
+  spr.drawString(AUTHORS_LINE5, 2, 70 + 16 * 4, 2);
+  spr.pushSprite(0, 0);
+}
+
 //
 // Draw ABOUT screens
 //
@@ -3586,8 +3616,8 @@ void drawAbout()
   switch(doAbout(0))
   {
     case 0: drawAboutHelp(1); break;
-    case 1: drawAboutAuthors(3); break;
-    case 2: drawAboutSystem(2); break;
+    case 1: drawInfo(3); break;
+    case 2: drawLicense(2); break;
     default: break;
   }
 }

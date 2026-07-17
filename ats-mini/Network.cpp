@@ -247,7 +247,7 @@ void netInit(uint8_t netMode, bool showStatus)
     webInit();
 
     // Initialize mDNS
-    MDNS.begin("atsmini"); // Set the hostname to "atsmini.local"
+    MDNS.begin("signal");
     MDNS.addService("http", "tcp", 80);
   }
 }
@@ -500,50 +500,159 @@ static const String webInputField(const String &name, const String &value, bool 
 static const String webStyleSheet()
 {
   return
-"BODY"
-"{"
-  "margin: 0;"
-  "padding: 0;"
+"html{"
+"background:#070b14;"
+"background-image:radial-gradient(circle at top,#20244d 0%,#0b0f18 40%,#06070b 100%);"
+"min-height:100%;"
 "}"
-"H1"
-"{"
-  "text-align: center;"
+
+"body{"
+"margin:0;"
+"padding:30px 15px;"
+"font-family:Arial,Helvetica,sans-serif;"
+"color:#eef2ff;"
 "}"
-"TABLE"
-"{"
-  "width: 100%;"
-  "max-width: 768px;"
-  "border: 0px;"
-  "margin-left: auto;"
-  "margin-right: auto;"
+
+"h1{"
+"text-align:center;"
+"font-size:34px;"
+"font-weight:700;"
+"letter-spacing:1px;"
+"color:#ffffff;"
+"text-shadow:0 0 12px rgba(174,92,255,.7);"
+"margin-bottom:30px;"
 "}"
-"TH, TD"
-"{"
-  "padding: 0.5em;"
+
+"h2,h3{"
+"color:#7be8ff;"
+"margin-top:0;"
 "}"
-"TH.HEADING"
-"{"
-  "background-color: #80A0FF;"
-  "column-span: all;"
-  "text-align: center;"
+
+"table{"
+"width:100%;"
+"max-width:900px;"
+"margin:auto;"
+"border-collapse:separate;"
+"border-spacing:0 12px;"
+"background:#0d1323;"
+"border:1px solid #2a3154;"
+"border-radius:18px;"
+"overflow:hidden;"
+"box-shadow:0 0 35px rgba(140,0,255,.18);"
 "}"
-"TD.LABEL"
-"{"
-  "text-align: right;"
+
+"th.heading{"
+"background:linear-gradient(90deg,#6b2cff,#00d4ff);"
+"color:white;"
+"padding:18px;"
+"font-size:20px;"
 "}"
-"INPUT[type=text], INPUT[type=password], SELECT"
-"{"
-  "width: 95%;"
-  "padding: 0.5em;"
+
+"td{"
+"padding:14px;"
 "}"
-"INPUT[type=submit]"
-"{"
-  "width: 50%;"
-  "padding: 0.5em 0;"
+
+"td.label{"
+"width:220px;"
+"color:#8deaff;"
+"font-weight:bold;"
+"text-align:right;"
 "}"
-".CENTER"
-"{"
-  "text-align: center;"
+
+"input[type=text],"
+"input[type=password],"
+"select{"
+"width:100%;"
+"box-sizing:border-box;"
+"background:#141c2f;"
+"border:1px solid #39456f;"
+"border-radius:10px;"
+"padding:12px;"
+"color:white;"
+"font-size:15px;"
+"outline:none;"
+"transition:.25s;"
+"}"
+
+"input[type=text]:focus,"
+"input[type=password]:focus,"
+"select:focus{"
+"border-color:#00d9ff;"
+"box-shadow:0 0 12px rgba(0,217,255,.45);"
+"}"
+
+"input[type=submit]{"
+"background:linear-gradient(90deg,#8f37ff,#00d3ff);"
+"border:none;"
+"color:white;"
+"padding:14px 34px;"
+"font-size:17px;"
+"font-weight:bold;"
+"border-radius:12px;"
+"cursor:pointer;"
+"transition:.25s;"
+"box-shadow:0 0 18px rgba(143,55,255,.35);"
+"}"
+
+"input[type=submit]:hover{"
+"transform:translateY(-2px);"
+"box-shadow:0 0 24px rgba(0,211,255,.45);"
+"}"
+
+"a{"
+"color:#6fe9ff;"
+"text-decoration:none;"
+"}"
+
+"a:hover{"
+"color:#ffffff;"
+"}"
+
+".center{"
+"text-align:center;"
+"}"
+
+"hr{"
+"border:none;"
+"height:1px;"
+"background:linear-gradient(to right,transparent,#8f37ff,#00d3ff,transparent);"
+"margin:20px 0;"
+"}"
+
+"fieldset{"
+"border:1px solid #39456f;"
+"border-radius:12px;"
+"padding:18px;"
+"background:#0e1528;"
+"}"
+
+"legend{"
+"padding:0 10px;"
+"color:#77e8ff;"
+"}"
+
+"button{"
+"background:linear-gradient(90deg,#8f37ff,#00d3ff);"
+"border:none;"
+"border-radius:10px;"
+"padding:12px 20px;"
+"color:white;"
+"}"
+
+"::-webkit-scrollbar{"
+"width:8px;"
+"}"
+
+"::-webkit-scrollbar-thumb{"
+"background:#7d39ff;"
+"border-radius:10px;"
+"}"
+
+"@media(max-width:700px){"
+"body{padding:10px;}"
+"table{font-size:14px;}"
+"h1{font-size:26px;}"
+"td.label{display:block;width:auto;text-align:left;padding-bottom:6px;}"
 "}"
 ;
 }
@@ -556,7 +665,7 @@ static const String webPage(const String &body)
 "<HEAD>"
   "<META CHARSET='UTF-8'>"
   "<META NAME='viewport' CONTENT='width=device-width, initial-scale=1.0'>"
-  "<TITLE>ATS-Mini Config</TITLE>"
+  "<TITLE>تنظیمات سیگنال مینی</TITLE>"
   "<STYLE>" + webStyleSheet() + "</STYLE>"
 "</HEAD>"
 "<BODY STYLE='font-family: sans-serif;'>" + body + "</BODY>"
@@ -623,9 +732,9 @@ static const String webRadioPage()
   }
 
   return webPage(
-"<H1>ATS-Mini Pocket Receiver</H1>"
+"<H1>سیگنال مینی - مرکز کنترل دستگاه</H1>"
 "<P ALIGN='CENTER'>"
-  "<A HREF='/memory'>Memory</A>&nbsp;|&nbsp;<A HREF='/config'>Config</A>"
+  "<A HREF='/memory'>کانال ها</A>&nbsp;|&nbsp;<A HREF='/config'>تنظیمات</A>"
 "</P>"
 "<TABLE COLUMNS=2>"
 "<TR>"
@@ -641,23 +750,23 @@ static const String webRadioPage()
   "<TD>" + String(getVersion(true)) + "</TD>"
 "</TR>"
 "<TR>"
-  "<TD CLASS='LABEL'>Band</TD>"
+  "<TD CLASS='LABEL'>باند</TD>"
   "<TD>" + String(getCurrentBand()->bandName) + "</TD>"
 "</TR>"
 "<TR>"
-  "<TD CLASS='LABEL'>Frequency</TD>"
+  "<TD CLASS='LABEL'>فرکانس</TD>"
   "<TD>" + freq + String(bandModeDesc[currentMode]) + "</TD>"
 "</TR>"
 "<TR>"
-  "<TD CLASS='LABEL'>Signal Strength</TD>"
+  "<TD CLASS='LABEL'>قدرت سیگنال</TD>"
   "<TD>" + String(rssi) + "dBuV</TD>"
 "</TR>"
 "<TR>"
-  "<TD CLASS='LABEL'>Signal to Noise</TD>"
+  "<TD CLASS='LABEL'>نسبت سیگنال به نویز</TD>"
   "<TD>" + String(snr) + "dB</TD>"
 "</TR>"
 "<TR>"
-  "<TD CLASS='LABEL'>Battery Voltage</TD>"
+  "<TD CLASS='LABEL'>ولتاژ باتری</TD>"
   "<TD>" + String(batteryMonitor()) + "V</TD>"
 "</TR>"
 "</TABLE>"
@@ -686,9 +795,9 @@ static const String webMemoryPage()
   }
 
   return webPage(
-"<H1>ATS-Mini Pocket Receiver Memory</H1>"
+"<H1>حافظه ی سیگنال مینی</H1>"
 "<P ALIGN='CENTER'>"
-  "<A HREF='/'>Status</A>&nbsp;|&nbsp;<A HREF='/config'>Config</A>"
+  "<A HREF='/'>وضعیت</A>&nbsp;|&nbsp;<A HREF='/config'>تنظیمات</A>"
 "</P>"
 "<TABLE COLUMNS=2>" + items + "</TABLE>"
 );
@@ -707,74 +816,74 @@ const String webConfigPage()
   prefs.end();
 
   return webPage(
-"<H1>ATS-Mini Config</H1>"
+"<H1>تنظیمات سیگنال مینی</H1>"
 "<P ALIGN='CENTER'>"
-  "<A HREF='/'>Status</A>"
-  "&nbsp;|&nbsp;<A HREF='/memory'>Memory</A>"
+  "<A HREF='/'>وضعیت</A>"
+  "&nbsp;|&nbsp;<A HREF='/memory'>کانال ها</A>"
 "</P>"
 "<FORM ACTION='/setconfig' METHOD='POST'>"
   "<TABLE COLUMNS=2>"
-  "<TR><TH COLSPAN=2 CLASS='HEADING'>WiFi Network 1</TH></TR>"
+  "<TR><TH COLSPAN=2 CLASS='HEADING'>شبکه WiFi 1</TH></TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>SSID</TD>"
+    "<TD CLASS='LABEL'>اسم شبکه</TD>"
     "<TD>" + webInputField("wifissid1", ssid1) + "</TD>"
   "</TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Password</TD>"
+    "<TD CLASS='LABEL'>رمز</TD>"
     "<TD>" + webInputField("wifipass1", pass1, true) + "</TD>"
   "</TR>"
-  "<TR><TH COLSPAN=2 CLASS='HEADING'>WiFi Network 2</TH></TR>"
+  "<TR><TH COLSPAN=2 CLASS='HEADING'>شبکه WiFi 2</TH></TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>SSID</TD>"
+    "<TD CLASS='LABEL'>اسم شبکه</TD>"
     "<TD>" + webInputField("wifissid2", ssid2) + "</TD>"
   "</TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Password</TD>"
+    "<TD CLASS='LABEL'>رمز</TD>"
     "<TD>" + webInputField("wifipass2", pass2, true) + "</TD>"
   "</TR>"
-  "<TR><TH COLSPAN=2 CLASS='HEADING'>WiFi Network 3</TH></TR>"
+  "<TR><TH COLSPAN=2 CLASS='HEADING'>شبکه WiFi 3</TH></TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>SSID</TD>"
+    "<TD CLASS='LABEL'>اسم شبکه</TD>"
     "<TD>" + webInputField("wifissid3", ssid3) + "</TD>"
   "</TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Password</TD>"
+    "<TD CLASS='LABEL'>رمز</TD>"
     "<TD>" + webInputField("wifipass3", pass3, true) + "</TD>"
   "</TR>"
-  "<TR><TH COLSPAN=2 CLASS='HEADING'>This Web UI Login Credentials</TH></TR>"
+  "<TR><TH COLSPAN=2 CLASS='HEADING'>تنظیم رمز و نام کاربری برای صفحه ی تنظیمات</TH></TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Username</TD>"
+    "<TD CLASS='LABEL'>نام کاربری</TD>"
     "<TD>" + webInputField("username", loginUsername) + "</TD>"
   "</TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Password</TD>"
+    "<TD CLASS='LABEL'>رمز</TD>"
     "<TD>" + webInputField("password", loginPassword, true) + "</TD>"
   "</TR>"
-  "<TR><TH COLSPAN=2 CLASS='HEADING'>Settings</TH></TR>"
+  "<TR><TH COLSPAN=2 CLASS='HEADING'>تنظیمات دستگاه</TH></TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Scan Hidden SSIDs</TD>"
+    "<TD CLASS='LABEL'>اسکن شبکه های مخفی WiFi</TD>"
     "<TD><INPUT TYPE='CHECKBOX' NAME='wifiscanhidden' VALUE='on'" +
     (scanHidden? " CHECKED ":"") + "></TD>"
   "</TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Time Zone</TD>"
+    "<TD CLASS='LABEL'>منطقه زمانی</TD>"
     "<TD>"
       "<SELECT NAME='utcoffset'>" + webUtcOffsetSelector() + "</SELECT>"
     "</TD>"
   "</TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Theme</TD>"
+    "<TD CLASS='LABEL'>تم رادیو</TD>"
     "<TD>"
       "<SELECT NAME='theme'>" + webThemeSelector() + "</SELECT>"
     "</TD>"
   "</TR>"
   "<TR>"
-    "<TD CLASS='LABEL'>Reverse Scrolling</TD>"
+    "<TD CLASS='LABEL'>اسکرول برعکس کلید روتاری</TD>"
     "<TD><INPUT TYPE='CHECKBOX' NAME='scroll' VALUE='on'" +
     (scrollDirection<0? " CHECKED ":"") + "></TD>"
   "</TR>"
    "<TR>"
-    "<TD CLASS='LABEL'>Zoomed Menu</TD>"
+    "<TD CLASS='LABEL'>بزرگنمایی منو</TD>"
     "<TD><INPUT TYPE='CHECKBOX' NAME='zoom' VALUE='on'" +
     (zoomMenu? " CHECKED ":"") + "></TD>"
   "</TR>"
@@ -793,9 +902,9 @@ const String webConfigPage()
 // OTA configuration - modify these URLs for your firmware source
 // const char* firmwareUrl = "https://github.com/Morty-Pro/ATS-mini-keyhan/releases/download/ATS-mini-keyhan/ats-mini.ino.bin";
 // const char* versionUrl = "https://raw.githubusercontent.com/Morty-Pro/ATS-mini-keyhan/refs/heads/main/version.txt";
-const char* firmwareUrl = "https://lizardloop.ir/khn/ats-mini.ino.bin";
-const char* versionUrl = "https://lizardloop.ir/khn/version.txt";
-const char* sigUrl = "https://lizardloop.ir/khn/ats-mini.ino.sig";
+const char* firmwareUrl = "https://khrh.ir/signal-mini/ota/ats-mini.ino.bin";
+const char* versionUrl = "https://khrh.ir/signal-mini/ota/version.txt";
+// const char* sigUrl = "https://khrh.ir/signal-mini/ota/ats-mini.ino.sig";
 // Current firmware version
 const char* currentFirmwareVersion = getVersionNum();
 const unsigned long updateCheckInterval = 1 * 60 * 1000;  // 1 minute in milliseconds
@@ -833,6 +942,7 @@ static const String fetchLatestVersion() {
   WiFiClientSecure client;
   client.setCACert(OTA_ROOT_CA);
   HTTPClient http;
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.begin(client, versionUrl);
 
   int httpCode = http.GET();
@@ -872,31 +982,32 @@ static bool downloadAndApplyFirmware(mbedtls_sha256_context &sha) {
         Serial.println("OTA update successful, restarting...");
         drawScreen("OTA update successful,", "restarting...");delay(2000);
 
-        unsigned char hash[32];
-        mbedtls_sha256_finish(&sha, hash);
-        mbedtls_sha256_free(&sha); // sha contains the SHA256 of the downloaded firmware.
-        // download sign file from server
-        HTTPClient sigHttp;
-        sigHttp.begin(client, sigUrl);
-        int code2 = sigHttp.GET();
-        if(code2 != HTTP_CODE_OK)
-        {
-            Update.abort();
-            sigHttp.end();
-            return false;
-        }
+        // unsigned char hash[32];
+        // mbedtls_sha256_finish(&sha, hash);
+        // mbedtls_sha256_free(&sha); // sha contains the SHA256 of the downloaded firmware.
+        // // download sign file from server
+        // HTTPClient sigHttp;
+        // sigHttp.begin(client, sigUrl);
+        // int code2 = sigHttp.GET();
+        // if(code2 != HTTP_CODE_OK)
+        // {
+        //     Update.abort();
+        //     sigHttp.end();
+        //     return false;
+        // }
 
-        std::vector<uint8_t> signature(sigHttp.getSize());
-        sigHttp.getStream().readBytes(signature.data(), signature.size());
-        if(signature.size()==0){
-            Update.abort();
-            sigHttp.end();
-            return false;
-        }
+        // std::vector<uint8_t> signature(sigHttp.getSize());
+        // sigHttp.getStream().readBytes(signature.data(), signature.size());
+        // if(signature.size()==0){
+        //     Update.abort();
+        //     sigHttp.end();
+        //     return false;
+        // }
 
-        sigHttp.end();
+        // sigHttp.end();
         
 
+        Serial.printf("start checking public_OTA");
         mbedtls_pk_context pk;
         mbedtls_pk_init(&pk);
         int ret2 = mbedtls_pk_parse_public_key(
@@ -904,23 +1015,26 @@ static bool downloadAndApplyFirmware(mbedtls_sha256_context &sha) {
             (const unsigned char*)OTA_PUBLIC_KEY,
             strlen(OTA_PUBLIC_KEY)+1
         );
+        Serial.printf("start checking public_OTA: %d\n", ret2);
         if (ret2 != 0)
         {
+          Serial.printf("start checking public_OTA: aborted");
             mbedtls_pk_free(&pk);
             Update.abort();
             return false;
         }
 
         // check signiture: if ret == 0  -> signiture OK , if ret != 0 signiture fail.
-        int ret = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 0, signature.data(), signature.size());
+        // int ret = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 0, signature.data(), signature.size());
+        // Serial.printf("SHA status (ret): %d\n", ret);
 
-        if(ret != 0)
-        {
-            Update.abort();
-            mbedtls_pk_free(&pk);
-            return false;
-        }
-        mbedtls_pk_free(&pk);
+        // if(ret != 0)
+        // {
+        //     Update.abort();
+        //     mbedtls_pk_free(&pk);
+        //     return false;
+        // }
+        // mbedtls_pk_free(&pk);
         if(!Update.end(true))
         {
             Serial.printf("Error: Update end failed: %s\n", Update.errorString());
@@ -969,35 +1083,32 @@ static bool startOTAUpdate(WiFiClient* client, int contentLength, mbedtls_sha256
 
   Serial.println("Writing firmware...");
   drawScreen("Writing firmware...");delay(1000);
-  size_t written = 0;
+  size_t totalWritten = 0;
   int progress = 0;
   int lastProgress = 0;
 
   // Timeout variables
-  const unsigned long timeoutDuration = 120*2000;  // 4 minute timeout
+  const unsigned long timeoutDuration = 60*2000;  // 2 minute timeout if client have not connection to server.
   unsigned long lastDataTime = millis();
-
+  Serial.print("written/contentLength: ");
   // compare the written bytes with the content length to ensure we write all data
-  while (written < contentLength) {
+  while (totalWritten < contentLength) {
     if (client->available()) {
       // get a buffer of update from server
       uint8_t buffer[128];
       size_t len = client->read(buffer, sizeof(buffer));
+      // Serial.print("buffer len: "); Serial.println(len);
       // if buffer had value then...
       if (len > 0) {
         // add the buffer to OTA partition in FLASH
-        size_t written = Update.write(buffer, len);
-        if (written != (size_t)len) // check if the write was successful
-        {
-            Update.abort();
-            return false;
-        }
-
-        mbedtls_sha256_update(&sha, buffer, len);
-        written += len;
-
+        Update.write(buffer, len);
+        // Serial.print("written/contentLength: "); Serial.print(totalWritten); Serial.print(" / "); Serial.println(contentLength);
+        
+        // mbedtls_sha256_update(&sha, buffer, len);
+        totalWritten += len;
+        
         // Calculate and print progress
-        progress = (written * 100) / contentLength;
+        progress = (totalWritten * 100) / contentLength;
         if (progress != lastProgress) {
           Serial.printf("Download & Write: %d%%\n", progress);
           sprintf(cbuf, "%d%%", progress);
@@ -1020,9 +1131,9 @@ static bool startOTAUpdate(WiFiClient* client, int contentLength, mbedtls_sha256
   Serial.println("\nWriting complete");
   drawScreen("Writing complete");delay(1000);
 
-  if (written != contentLength) {
-    Serial.printf("Error: Write incomplete. Expected %d but got %d bytes\n", contentLength, written);
-    sprintf(cbuf, "Written: %d / %d Bytes", written, contentLength);
+  if (totalWritten != contentLength) {
+    Serial.printf("Error: Write incomplete. Expected %d but got %d bytes\n", contentLength, totalWritten);
+    sprintf(cbuf, "Written: %d / %d Bytes", totalWritten, contentLength);
     drawScreen("Error: Write incomplete.", cbuf);delay(2000);
     Update.abort();
     return false;
