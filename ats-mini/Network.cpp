@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "Menu.h"
 #include "Draw.h"
+#include "LicenseAuth.h"  // License authentication system for device authorization
 
 #include <WiFi.h>
 #include <WiFiMulti.h>
@@ -97,6 +98,25 @@ tL4ndQavEi51mI38AjEAi/V3bNTIZargCyzuFJ0nN6T5U6VR5CmD1/iQMVtCnwr1
 /q4AaOeMSQ+2b1tbFfLn
 -----END CERTIFICATE-----)EOF";
 
+// ============================================================
+// LICENSE INTEGRATION
+// These functions handle automatic license acquisition after
+// WiFi connection is established.
+// ============================================================
+
+/**
+ * @brief Request license acquisition after WiFi connects
+ * 
+ * Called when WiFi connection is established to automatically
+ * acquire the device license from the server.
+ */
+void netRequestLicenseAcquisition() {
+    // The checkAndAcquireLicense() function in netTickTime() will handle this
+    // This is a convenience function for explicit triggering
+    connectTime = millis();  // Trigger immediate check
+    itIsTimeToWiFi = true;
+}
+
 //
 // Delayed WiFi connection
 //
@@ -114,6 +134,13 @@ void netTickTime()
     netInit(wifiModeIdx);
     connectTime = millis();
     itIsTimeToWiFi = false;
+  }
+  
+  // After WiFi is connected, check and acquire license if needed
+  // This is non-blocking and only attempts once per check interval
+  if(WiFi.status() == WL_CONNECTED)
+  {
+    checkAndAcquireLicense();
   }
 }
 
@@ -902,9 +929,16 @@ const String webConfigPage()
 // OTA configuration - modify these URLs for your firmware source
 // const char* firmwareUrl = "https://github.com/Morty-Pro/ATS-mini-keyhan/releases/download/ATS-mini-keyhan/ats-mini.ino.bin";
 // const char* versionUrl = "https://raw.githubusercontent.com/Morty-Pro/ATS-mini-keyhan/refs/heads/main/version.txt";
-const char* firmwareUrl = "https://khrh.ir/signal-mini/ota/ats-mini.ino.bin";
-const char* versionUrl = "https://khrh.ir/signal-mini/ota/version.txt";
-// const char* sigUrl = "https://khrh.ir/signal-mini/ota/ats-mini.ino.sig";
+
+// lozelab server
+const char* firmwareUrl = "https://lozelab.ir/ats-mini.ino.bin";
+const char* versionUrl = "https://lozelab.ir/version.txt";
+// keyhan server
+// const char* firmwareUrl = "https://khrh.ir/signal-mini-update/ota/ats-mini.ino.bin";
+// const char* versionUrl = "https://khrh.ir/signal-mini-update/ota/version.txt";
+
+
+// const char* sigUrl = "https://khrh.ir/signal-mini-update/ota/ats-mini.ino.sig";
 // Current firmware version
 const char* currentFirmwareVersion = getVersionNum();
 const unsigned long updateCheckInterval = 1 * 60 * 1000;  // 1 minute in milliseconds

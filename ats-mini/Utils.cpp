@@ -215,7 +215,7 @@ bool sleepOn(int x)
     tft.writecommand(ST7789_SLPIN);
 
     // digitalWrite(PIN_POWER_ON, LOW);  // keyhan what to do with this? sleepOn works properly? it does disable radio chip!
-    digitalWrite(PIN_AMP_EN, LOW);
+    // digitalWrite(PIN_AMP_EN, LOW);
 
     // Wait till the button is released to prevent immediate wakeup
     while(pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW).isPressed)
@@ -228,6 +228,8 @@ bool sleepOn(int x)
 
       // Unmute squelch
       if(muteOn(MUTE_SQUELCH) && !muteOn(MUTE_MAIN)) muteOn(MUTE_FORCE, false);
+      
+      digitalWrite(PIN_AMP_EN, LOW); // added by keyhan
 
       while(true)
       {
@@ -260,6 +262,9 @@ bool sleepOn(int x)
       pinMode(ENCODER_PUSH_BUTTON, INPUT_PULLUP);
       if(muteOn(MUTE_SQUELCH) && !muteOn(MUTE_MAIN)) muteOn(MUTE_FORCE, true);
       sleepOn(false);
+
+      digitalWrite(PIN_AMP_EN, HIGH); // added by keyhan
+
       // Enable WiFi
       netInit(wifiModeIdx, false);
     }
@@ -267,13 +272,14 @@ bool sleepOn(int x)
   else if((x==0) && sleep_on)
   {
     sleep_on = false;
+
     tft.writecommand(ST7789_SLPOUT);
     delay(120);
     tft.writecommand(ST7789_DISPON);
     drawScreen();
     ledcWrite(PIN_LCD_BL, currentBrt);
 
-    digitalWrite(PIN_AMP_EN, HIGH); // keyhan is it work? sleep mode is silent?
+    // digitalWrite(PIN_AMP_EN, HIGH); // keyhan is it work? sleep mode is silent?
 
     // Wait till the button is released to prevent the main loop clicks
     pb1.reset(); // Reset the button state (its timers could be stale due to CPU sleep)

@@ -10,12 +10,12 @@
 #define FIRMWARE_URL   "https://github.com/esp32-si4732/ats-mini"
 #define MANUAL_URL     "https://khrh.ir/signal-support"
 #define AUTHORS_LINE1  "Signal Mini"
-#define AUTHORS_LINE2  "Version: 1.0.0"
+#define AUTHORS_LINE2  "Version: 1.01"
 #define AUTHORS_LINE3  "Custom firmware developed by KHRH."
 #define AUTHORS_LINE4  "Designed for"
 #define AUTHORS_LINE5  "HamRadio Lovers"
 
-#define VER_APP        236  // Firmware version
+#define VER_APP        101  // Firmware version
 #define VER_SETTINGS   71   // Settings version
 #define VER_MEMORIES   71   // Memories version
 #define VER_BANDS      72   // Bands version
@@ -237,6 +237,13 @@ bool ntpSyncTime();
 
 void netRequestConnect();
 void netTickTime();
+
+// LicenseAuth.h - License authentication system (prevents code cloning)
+// These functions handle hardware-based license verification
+// Note: Default parameters defined in LicenseAuth.h only - no defaults here to avoid duplicate specification
+bool initLicenseCheck(bool showOnScreen);       // Check license at startup
+bool isDeviceLicensed();                                // Quick license check
+bool checkAndAcquireLicense();                          // Auto-acquire after WiFi connects
 
 // Remote.c
 #define REMOTE_CHANGED   1

@@ -41,3 +41,14 @@ dir: gitRepo\ats-mini\ats-mini
 (optioal) set HALF_STEP=1 
 (important) set PORT=COM5
 (important) make upload
+
+----------------------------------------------------------------------------------------------------------------------------------------
+
+To install library for Arduino-cli of this project:
+
+run in shell: 
+arduino-cli compile --fqbn esp32:esp32:esp32s3 C:\MortyFile\ENG\A_Projects\gitRepo\ats-mini\ats-mini --show-properties
+
+find something like runtime.platform.path=...	like: runtime.platform.path=C:\Users\manam\AppData\Local\Arduino15\internal\esp32_esp32_3.3.8_875c2733cc370a76
+
+
